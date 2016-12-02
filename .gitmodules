@@ -1,0 +1,3 @@
+[submodule "touchstone-dss"]
+	path = touchstone-dss
+	url = git@github.com:2ndQuadrant/touchstone-dss.git
