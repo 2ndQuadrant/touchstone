@@ -1,0 +1,10 @@
+If you are using a git checkout, you will need to manually retrieve the
+submodules:
+
+    git submodule init
+
+To set a specific branch for a submodule and update, specifically for
+touchstone-dss:
+
+    git config -f .gitmodules submodule.touchstone-dss.branch proto
+    git submodule update --remote
