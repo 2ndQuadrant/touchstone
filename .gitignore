@@ -20,4 +20,6 @@ Testing
 src/test/*
 !/src/test/CMakeLists.txt
 !/src/test/*.c
+!/src/test/*.expected
 !/src/test/*.sh
+!/src/test/*.sql
