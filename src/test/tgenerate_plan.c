@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 	q.id = 1;
 	q.vars = 1;
 	q.flag_analyze = 0;
-	q.flag_plan = 0;
+	q.flag_plan = 1;
 	strcpy(q.var[0], "ONE");
 
 	return generate_query(argv[2], argv[3], &q);

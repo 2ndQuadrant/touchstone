@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
 	q.id = 1;
 	q.vars = 1;
-	q.flag_analyze = 0;
+	q.flag_analyze = 1;
 	q.flag_plan = 0;
 	strcpy(q.var[0], "ONE");
 

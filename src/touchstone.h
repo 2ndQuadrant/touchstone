@@ -14,10 +14,14 @@
 #define int64 long int
 
 struct query_t {
+	int flag_analyze;
+	int flag_plan;
 	int id;
 	int vars; /* Number of variables we have data for. */
+	char analyze[BUFFER_LEN]; /* Generate query analysis. */
 	char comment[BUFFER_LEN]; /* SQL one line comment prefix. */
 	char end[BUFFER_LEN]; /* End transaction. */
+	char plan[BUFFER_LEN]; /* Generate query plan. */
 	char start[BUFFER_LEN]; /* Start transaction */
 	/* This is currently hard coded to be able to hold up to 9 variables. */
 	char var[MAXVAR][VAR_LEN];
