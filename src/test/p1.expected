@@ -1,6 +1,6 @@
 -- Q 1
 -- 1: ONE
 BEGIN;
-
+EXPLAIN
 SELECT ONE;
 COMMIT;

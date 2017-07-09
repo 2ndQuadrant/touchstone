@@ -103,6 +103,12 @@ int generate_query(char *in, char *out, struct query_t *q)
 			case 'e':
 				rc = fprintf(fout, "%s", q->end);
 				break;
+			case 'p':
+				if (q->flag_analyze)
+					rc = fprintf(fout, "%s", q->analyze);
+				else if (q->flag_plan)
+					rc = fprintf(fout, "%s", q->plan);
+				break;
 			case 's':
 				rc = fprintf(fout, "%s", q->start);
 				break;
@@ -171,10 +177,14 @@ int load_query_parameters(char * in, struct query_t *q)
 		 * Handle all regcognized parameters and just print out ones not
 		 * recognized.
 		 */
-		if (strncmp(param, "COMMENT", BUFFER_LEN - 1) == 0)
+		if (strncmp(param, "ANALYZE", BUFFER_LEN - 1) == 0)
+			strncpy(q->analyze, value, BUFFER_LEN - 1);
+		else if (strncmp(param, "COMMENT", BUFFER_LEN - 1) == 0)
 			strncpy(q->comment, value, BUFFER_LEN - 1);
 		else if (strncmp(param, "END", BUFFER_LEN - 1) == 0)
 			strncpy(q->end, value, BUFFER_LEN - 1);
+		else if (strncmp(param, "PLAN", BUFFER_LEN - 1) == 0)
+			strncpy(q->plan, value, BUFFER_LEN - 1);
 		else if (strncmp(param, "START", BUFFER_LEN - 1) == 0)
 			strncpy(q->start, value, BUFFER_LEN - 1);
 		else
