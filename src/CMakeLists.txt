@@ -1,4 +1,5 @@
 ADD_LIBRARY(touchstone SHARED dist.c mt19937-64 touchstone.c)
+ADD_SUBDIRECTORY(scripts)
 ADD_SUBDIRECTORY(test)
 INSTALL(FILES touchstone.h DESTINATION "${INSTALLDEST}/include")
 INSTALL(PROGRAMS libtouchstone.so DESTINATION "${INSTALLDEST}/lib")

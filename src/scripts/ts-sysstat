@@ -1,0 +1,110 @@
+#!/bin/sh
+#
+# Copyright 2017-2018 PostgreSQL Global Development Group
+#
+
+usage() {
+	echo "Usage: `basename $0` <options>"
+	echo
+	echo "Options:"
+	echo "  -o <path>  Path to save results"
+	echo "  -s         Kill all stat collection processes with pids in -o <path>"
+}
+
+SARPIDFILE=""
+PIDSTATPIDFILE=""
+RAWSARFILE=""
+
+OUTDIR=""
+SAMPLE_LENGTH=60
+STOP=0
+while getopts "ho:s" OPT; do
+	case $OPT in
+	h)
+		usage
+		exit 0
+		;;
+	o)
+		OUTDIR=$OPTARG
+		mkdir -p $OUTDIR
+		PIDSTATPIDFILE="$OUTDIR/pidstat.pid"
+		SARPIDFILE="$OUTDIR/sar.pid"
+		;;
+	s)
+		STOP=1
+		;;
+	esac
+done
+
+if [ -z "$OUTDIR" ]; then
+	echo "ERROR: Specify output directory with -o"
+	exit 1
+fi
+
+RAWSARFILE="$OUTDIR/sar_raw.out"
+
+if [ $STOP -eq 1 ]; then
+	for PIDFILE in $SARPIDFILE $PIDSTATPIDFILE; do
+		read PID < $PIDFILE
+		kill $PID
+	done
+
+	which sadf > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		SADF="sadf -d -U"
+		$SADF 1 1 > /dev/null 2>&1
+		if [ $? -ne 0 ]; then
+			SADF="sadf -D"
+			$SADF 1 1 > /dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				echo "WARNING: Was not able to determine proper sadf flags"
+				SADF="true"
+			fi
+		fi
+	else
+		SADF=true
+	fi
+
+	SARDIR="$OUTDIR/sar"
+	mkdir -p $SARDIR
+	$SADF -P ALL $FILE > $SARDIR/sar-cpu.csv
+	$SADF $FILE -- -B > $SARDIR/sar-paging.csv
+	$SADF $FILE -- -d -p > $SARDIR/sar-blockdev.csv
+	$SADF $FILE -- -R > $SARDIR/sar-mem1.csv
+	$SADF $FILE -- -r > $SARDIR/sar-mem2.csv
+	$SADF $FILE -- -W > $SARDIR/sar-swap.csv
+	$SADF $FILE -- -n DEV > $SARDIR/sar-net.csv
+
+	exit 0
+fi
+
+which sar > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+	SAR="sar"
+else
+	SAR="true"
+fi
+
+which pidstat > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    PIDSTAT="pidstat -h -l -d -r -s -u -w"
+	$PIDSTAT 1 1 > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		PIDSTAT="pidstat -h -l -d -r -u -w"
+		$PIDSTAT 1 1 > /dev/null 2>&1
+		if [ $? -ne 0 ]; then
+			echo "WARNING: Cannot determine propper pidstat flags"
+			PIDSTAT="true"
+		fi
+	fi
+else
+    PIDSTAT=true
+fi
+
+$SAR -o $RAWSARFILE $SAMPLE_LENGTH > $OUTDIR/sar.txt &
+echo $! > $SARPIDFILE
+
+$PIDSTAT $SAMPLE_LENGTH > $OUTDIR/pidstat.txt &
+echo $! > $PIDSTATPIDFILE
+
+exit 0

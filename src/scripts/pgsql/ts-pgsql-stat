@@ -1,0 +1,135 @@
+#!/bin/sh
+#
+# Copyright 2017-2018 PostgreSQL Global Development Group
+#
+
+usage() {
+	echo "Usage: `basename $0` <options>"
+	echo
+	echo "Options:"
+	echo "  -o <path>  Path to save results"
+	echo "  -s         Kill all stat collection processes with pids in -o <path>"
+}
+
+start_collection() {
+	# Initial sample with header information
+	$PSQL -c "COPY ($LOCKSTAT) TO STDOUT (FORMAT CSV, HEADER);" \
+			> $DBDIR/lockstats.csv &
+	$PSQL -c "COPY ($DBACTIVITY) TO STDOUT (FORMAT CSV, HEADER);" \
+			> $DBDIR/db_activity.csv &
+	$PSQL -c "COPY ($STATDB) TO STDOUT (FORMAT CSV, HEADER);" \
+			> $DBDIR/pg_stat_databases.csv &
+	$PSQL -c "COPY ($STATTABLE) TO STDOUT (FORMAT CSV, HEADER);" \
+			> $DBDIR/pg_stat_tables.csv &
+	$PSQL -c "COPY ($STATINDEX) TO STDOUT (FORMAT CSV, HEADER);" \
+			> $DBDIR/pg_stat_indexes.csv &
+
+	while [ 1 ]; do
+		sleep $SAMPLE_LENGTH
+
+		$PSQL -c "COPY ($LOCKSTAT) TO STDOUT (FORMAT CSV);" \
+				>> $DBDIR/lockstats.csv &
+		$PSQL -c "COPY ($DBACTIVITY) TO STDOUT (FORMAT CSV);" \
+				>> $DBDIR/db_activity.csv &
+		$PSQL -c "COPY ($STATDB) TO STDOUT (FORMAT CSV);" \
+				>> $DBDIR/pg_stat_databases.csv &
+		$PSQL -c "COPY ($STATTABLE) TO STDOUT (FORMAT CSV);" \
+				>> $DBDIR/pg_stat_tables.csv &
+		$PSQL -c "COPY ($STATINDEX) TO STDOUT (FORMAT CSV);" \
+				>> $DBDIR/pg_stat_indexes.csv &
+	done
+}
+
+OUTDIR=""
+SAMPLE_LENGTH=60
+STOP=0
+while getopts "ho:s" OPT; do
+	case $OPT in
+	h)
+		usage
+		exit 0
+		;;
+	o)
+		OUTDIR=$OPTARG
+		mkdir -p $OUTDIR
+		PIDSTATPIDFILE="$OUTDIR/pidstat.pid"
+		SARPIDFILE="$OUTDIR/sar.pid"
+		;;
+	s)
+		STOP=1
+		;;
+	esac
+done
+
+if [ -z "$OUTDIR" ]; then
+	echo "ERROR: Specify output directory with -o"
+	exit 1
+fi
+
+PIDFILE="$OUTDIR/dbstat.pid"
+
+if [ $STOP -eq 1 ]; then
+	read PID < $PIDFILE
+	kill $PID
+	exit 0
+fi
+
+DBDIR=$OUTDIR/db
+mkdir -p $DBDIR
+
+PSQL="psql -v ON_ERROR_STOP=1 -X -t --no-align"
+PGVERSION=`$PSQL -c "SHOW server_version_num;"`
+PIDCOL="procpid"
+QUERYCOL="current_query"
+EXTRACOL=""
+if [ $PGVERSION -gt 90099 ]; then
+	PIDCOL="pid"
+	QUERYCOL="query"
+	EXTRACOL=", state, state_change"
+fi
+
+LOCKSTAT="SELECT EXTRACT(EPOCH FROM TRANSACTION_TIMESTAMP()) AS ctime, \
+relname, pid, mode, granted \
+FROM pg_locks, pg_class \
+WHERE relfilenode = relation \
+ORDER BY relname"
+
+DBACTIVITY="SELECT EXTRACT(EPOCH FROM TRANSACTION_TIMESTAMP()) AS ctime, * \
+FROM pg_stat_activity"
+
+STATDB="SELECT EXTRACT(EPOCH FROM TRANSACTION_TIMESTAMP()) AS ctime, * \
+FROM pg_stat_database"
+
+STATTABLE="SELECT EXTRACT(EPOCH FROM TRANSACTION_TIMESTAMP()) AS ctime, * \
+FROM pg_statio_all_tables a, pg_stat_all_tables b \
+WHERE a.relid = b.relid"
+
+STATINDEX="SELECT EXTRACT(EPOCH FROM TRANSACTION_TIMESTAMP()) AS ctime, * \
+FROM pg_stat_all_indexes a, pg_statio_all_indexes b \
+WHERE a.indexrelid = b.indexrelid"
+
+# Save database version information
+$PSQL -c "SELECT version();" >> $DBDIR/readme.txt
+pg_config --configure >> $DBDIR/readme.txt
+
+# Save database parameters
+$PSQL -c "SELECT name, setting, source "'
+		'"FROM pg_settings "'
+		'"ORDER BY lower(name);" -o $DBDIR/params.txt
+
+# Save table names
+$PSQL -c "SELECT tablename "`
+		`"FROM pg_tables "`
+		`"WHERE schemaname = 'public'"`
+		`"ORDER BY tablename;" -o $DBDIR/table-list.txt
+
+# Save index names
+$PSQL -c "SELECT indexname "`
+		`"FROM pg_indexes "`
+		`"WHERE schemaname = 'public' "`
+		`"ORDER BY indexname;" -o $DBDIR/index-list.txt
+
+start_collection &
+echo $! > $PIDFILE
+
+exit 0

@@ -1,0 +1,1 @@
+INSTALL(PROGRAMS ts-pgsql-stat DESTINATION "${INSTALLDEST}/bin")
