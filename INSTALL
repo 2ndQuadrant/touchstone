@@ -1,0 +1,11 @@
+Installing
+==========
+
+    cmake CMakeLists.txt -DDESTDIR=/usr/local
+    make
+    make install
+
+Uninstalling
+============
+
+    xargs rm < install_manifest.txt
