@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# Copyright 2018 PostgreSQL Global Development Group
+#
+
+usage() {
+	echo "Usage: `basename $0` <options>"
+	echo
+	echo "Options:"
+	echo "  -i <q_time.csv>  query timing output file"
+}
+
+plot_q() {
+	local DATAFILE=`tempfile`
+	awk -F , 'NR > 1 {print $1, $2}' `basename $QTIME` | sort -nk 1 > $DATAFILE
+	gnuplot <<- __EOF__
+			datafile = "$DATAFILE"
+			set datafile separator " "
+			set title "Execution Time"
+			set terminal pngcairo size 800,500
+			set output 'q_time.png'
+			set xlabel "Query"
+			set ylabel "Seconds"
+			set boxwidth 0.75
+			set style fill solid
+			set grid
+			set nokey
+			plot datafile using 2:xtic(1) with boxes
+	__EOF__
+	rm -f $DATAFILE
+}
+
+QTIME=""
+while getopts "hi:" OPT; do
+	case $OPT in
+	h)
+		usage
+		exit 0
+		;;
+	i)
+		QTIME=$OPTARG
+		;;
+	esac
+done
+
+if [ -z "$QTIME" ]; then
+	echo "ERROR: Specify q_time.csv file with -i"
+	exit 1
+fi
+
+which gnuplot > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+	echo "WARNING: gnuplot not in path, query chart not created"
+	exit 0
+fi
+
+(cd `dirname $QTIME` && plot_q)
+
+exit 0
