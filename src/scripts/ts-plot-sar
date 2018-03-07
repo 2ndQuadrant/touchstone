@@ -1,0 +1,163 @@
+#!/bin/sh
+#
+# Copyright 2018 PostgreSQL Global Development Group
+#
+
+usage() {
+	echo "Usage: `basename $0` <options>"
+	echo
+	echo "Options:"
+	echo "  -i <path>  Path to sar data"
+}
+
+plot_blockdev() {
+	local CSVFILE="sar-blockdev.csv"
+
+	# Plot % util on a single chart for all devices
+
+	local DATAFILES=""
+	local GNUPLOTLINE=""
+	local DEVICES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort | uniq`
+	for DEV in $DEVICES; do
+		local DATAFILE=`tempfile`
+		DATAFILES="$DATAFILES $DATAFILE"
+		awk -F ";" "NR == 1 || \$4 == \"$DEV\"" $CSVFILE > $DATAFILE
+
+		if [ ! "x$GNUPLOTLINE" = "x" ]; then
+			GNUPLOTLINE="$GNUPLOTLINE,"
+		fi
+		GNUPLOTLINE="$GNUPLOTLINE \"$DATAFILE\" using 3:12"
+		GNUPLOTLINE="$GNUPLOTLINE title \"$DEV\" with lines"
+	done
+	gnuplot <<- __EOF__
+		set datafile separator ";"
+		set title "Block Device Utilization"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size 800,500
+		set output 'sar-per-blockdev.png'
+		set xlabel "Time"
+		set ylabel "% Utilization"
+		set yrange [0:100]
+		set xtics rotate
+		set key below
+		set grid
+		plot $GNUPLOTLINE
+	__EOF__
+	rm -f $DATAFILES
+}
+
+plot_cpu() {
+	local CSVFILE="sar-cpu.csv"
+
+	# Create aggregated chart for all processors
+
+	local DATAFILE=`tempfile`
+	awk -F ";" 'NR == 1 || $4 == -1' $CSVFILE > $DATAFILE
+	gnuplot <<- __EOF__
+		datafile = "$DATAFILE"
+		set datafile commentschar ""
+		set datafile separator ";"
+		set title "Processor Utilization"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size 800,500
+		set output 'sar-cpu.png'
+		set xlabel "Time"
+		set ylabel "% Utilization"
+		set yrange [0:100]
+		set xtics rotate
+		set key below
+		set grid
+		plot for [i=5:8:1] \
+			datafile using 3:(sum [col=i:8] column(col)) \
+			title columnheader(i) \
+			with lines
+	__EOF__
+	rm -f $DATAFILE
+
+	# Create % busy time per processor on a single chart.
+
+	local DATAFILES=""
+	local GNUPLOTLINE=""
+	local CPUS=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort -nr | head -1`
+	for CPU in `seq 0 $CPUS`; do
+		local DATAFILE=`tempfile`
+		DATAFILES="$DATAFILES $DATAFILE"
+		awk -F ";" "NR == 1 || \$4 == $CPU" $CSVFILE > $DATAFILE
+
+		if [ $CPU -gt 0 ]; then
+			GNUPLOTLINE="$GNUPLOTLINE,"
+		fi
+		GNUPLOTLINE="$GNUPLOTLINE \"$DATAFILE\" using 3:(sum [col=5:8]"
+		GNUPLOTLINE="$GNUPLOTLINE column(col)) title \"CPU$CPU\" with lines"
+	done
+	gnuplot <<- __EOF__
+		set datafile separator ";"
+		set title "Per Processor Utilization"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size 800,500
+		set output 'sar-per-cpu.png'
+		set xlabel "Time"
+		set ylabel "% Utilization"
+		set yrange [0:100]
+		set xtics rotate
+		set key below
+		set grid
+		plot $GNUPLOTLINE
+	__EOF__
+	rm -f $DATAFILES
+}
+
+plot_swap() {
+	gnuplot <<- __EOF__
+		datafile = "sar-paging.csv"
+		set datafile commentschar ""
+		set datafile separator ";"
+		set title "Swapping Activity"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size 800,500
+		set output 'sar-swapping.png'
+		set xlabel "Time"
+		set ylabel "pages / s"
+		set xtics rotate
+		set key below
+		set grid
+		plot for [i=4:5:1] \
+			datafile using 3:i \
+			title columnheader(i) \
+			with lines
+	__EOF__
+}
+
+SARDIR=""
+while getopts "hi:" OPT; do
+	case $OPT in
+	h)
+		usage
+		exit 0
+		;;
+	i)
+		SARDIR=$OPTARG
+		;;
+	esac
+done
+
+if [ -z "$SARDIR" ]; then
+	echo "ERROR: Specify sar directory with -i"
+	exit 1
+fi
+
+which gnuplot > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+	echo "WARNING: gnuplot not in path, sar charts not created"
+	exit 0
+fi
+
+(cd $SARDIR && plot_blockdev)
+(cd $SARDIR && plot_cpu)
+(cd $SARDIR && plot_swap)
+
+exit 0
