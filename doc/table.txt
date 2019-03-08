@@ -1,0 +1,16 @@
+Table definition files instruct the data generator how to generate data.  Files
+should be named after the name of the table to generate with a .ddf extension.
+The resulting data files will have a .data extension.  For example,
+tablename.ddf will generate a tablename.data file.
+
+The format of the file will contain the total number of row to generate on the
+first line.  Each subsequent line in the file will represent the columns to
+generate.
+
+For example:
+
+    10
+    s1
+
+This will generate a data file with 10 rows and 1 column, where that column is
+a sequence of numbers starting from 1.

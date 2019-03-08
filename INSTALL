@@ -5,6 +5,11 @@ Installing
     make
     make install
 
+Debugging
+=========
+
+Use `-DENABLE_CASSERT=1` when running `cmake` for additional debugging.
+
 Uninstalling
 ============
 

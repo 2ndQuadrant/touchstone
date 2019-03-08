@@ -1,0 +1,1 @@
+#cmakedefine ENABLE_CASSERT @ENABLE_CASSERT@

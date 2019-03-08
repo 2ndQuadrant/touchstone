@@ -17,9 +17,15 @@ Testing
 
 *.patch
 
+config.h
+
+src/bin/*
+!src/bin/CMakeLists.txt
+
 src/test/*
 !/src/test/CMakeLists.txt
 !/src/test/*.c
 !/src/test/*.expected
 !/src/test/*.sh
 !/src/test/*.sql
+!/src/test/*.ddf

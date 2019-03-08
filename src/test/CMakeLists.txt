@@ -14,6 +14,7 @@ ADD_EXECUTABLE(tget_days tget_days.c)
 SET_TARGET_PROPERTIES(${BFILES} PROPERTIES LINK_FLAGS "-L.. -ltouchstone")
 
 ADD_TEST(alpha sh tget_alpha.sh)
+ADD_TEST(data_generator sh tdata_generator.sh)
 ADD_TEST(days sh tget_days.sh)
 ADD_TEST(generate_analyze sh tgenerate_analyze.sh)
 ADD_TEST(generate_plan sh tgenerate_plan.sh)
