@@ -43,37 +43,67 @@ void usage(char *filename)
 {
 	printf("usage: %s [options]\n", filename);
 	printf("  options:\n");
+	printf("    -c <int> - number of data file chunks to generate, default: "
+			"1\n");
+	printf("    -C <int> - specify which chunk to generate\n");
 	printf("    -d <char> - column delimiter, default <tab>\n");
 	printf("    -f <filename> - data definition file\n");
 	printf("    -o <dir> - location to create data file else use stdout\n");
 }
 
 int generate_data(FILE *stream, struct table_definition_t *table,
-		char delimiter)
+		char delimiter, int chunks, int chunk)
 {
 	char str[MAX_BUFFER_LEN];
 	int end = table->columns - 1;
 
-	for (long long row = 0; row < table->rows; row++) {
+	FILE *which;
+	FILE *blackhole = NULL;
+	long long chunk_size;
+	long long chunk_start = 0;
+	long long last_row;
+
+	if (chunks > 1) {
+		chunk_size = table->rows / (long long) chunks;
+		chunk_start = (chunk - 1) * chunk_size;
+
+		blackhole = fopen("/dev/null", "w");
+		if (blackhole == NULL) {
+			fprintf(stderr, "ERROR: cannot open /dev/null [%d]\n", errno);
+			return 2;
+		}
+		last_row = chunk * chunk_size;
+	}
+	else
+		last_row = table->rows;
+
+	for (long long row = 0; row < last_row; row++) {
+		if (row < chunk_start)
+			which = blackhole;
+		else
+			which = stream;
 		for (long long col = 0; col < table->columns; col++) {
 			switch (table->column[col].type) {
 			case 's':
 				sequence(str, row +
 						((struct sequence_t *)
 								&table->column[col].arguments)->arg1);
-				fprintf(stream, "%s", str);
+				fprintf(which, "%s", str);
 				break;
 			default:
 				fprintf(stderr, "ERROR: unhandled column definition: %c\n",
 						table->column[col].type);
-				return 7;
+				return 1;
 			}
 			if (col < end)
-				fprintf(stream, "%c", delimiter);
+				fprintf(which, "%c", delimiter);
 		}
-		fprintf(stream, "\n");
-		fflush(stream);
+		fprintf(which, "\n");
+		fflush(which);
 	}
+
+	if (blackhole != NULL)
+		fclose(blackhole);
 
 	return 0;
 }
@@ -197,6 +227,8 @@ int main(int argc, char *argv[])
 	char *p;
 
 	FILE *stream = stdout;
+	int chunk = 0;
+	int chunks = 0;
 	char delimiter = '\t';
 	char data_definition_file[FILENAME_MAX] = "";
 	char outdir[FILENAME_MAX] = "";
@@ -214,12 +246,18 @@ int main(int argc, char *argv[])
 			{0, 0, 0, 0,}
 		};
 
-		c = getopt_long(argc, argv, "d:f:ho:", long_options, &option_index);
+		c = getopt_long(argc, argv, "c:C:d:f:ho:", long_options, &option_index);
 		if (c == -1)
 			break;
 
 		switch (c) {
 		case 0:
+			break;
+		case 'c':
+			chunks = atoi(optarg);
+			break;
+		case 'C':
+			chunk = atoi(optarg);
 			break;
 		case 'd':
 			delimiter = optarg[0];
@@ -252,15 +290,25 @@ int main(int argc, char *argv[])
 
 		/* Make sure the new filename doesn't exceed FILENAME_MAX. */
 		c = FILENAME_MAX - (strlen(outdir) + strlen(tmp) + 7);
+		if (chunks > 1) {
+			--c;
+			sprintf(datafile, "%d", chunks);
+			c -= strlen(datafile);
+		}
 		if (c < 0) {
 			fprintf(stderr, "ERROR: resulting datafile path and name is too "
 					"long: %s/%s.data\n", outdir, tmp);
 			return 6;
 		}
 
-		strcat(datafile, outdir);
+		strcpy(datafile, outdir);
 		strcat(datafile, "/");
 		strcat(datafile, tmp);
+		if (chunks > 1) {
+			sprintf(tmp, "%d", chunk);
+			strcat(datafile, ".");
+			strcat(datafile, tmp);
+		}
 		strcat(datafile, ".data");
 
 		stream = fopen(datafile, "w");
@@ -273,11 +321,16 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "datafile: %s\n", datafile);
 	}
 
+	if (chunks > 1 && chunk < 1) {
+		fprintf(stderr, "ERROR: must specify which chunk to create with -C\n");
+		return 8;
+	}
+
 	c = read_data_definition_file(&table, data_definition_file);
 	if (c != 0)
 		return 4;
 
-	c = generate_data(stream, &table, delimiter);
+	c = generate_data(stream, &table, delimiter, chunks, chunk);
 	if (c != 0)
 		return 5;
 	if (outdir[0] != '\0') {

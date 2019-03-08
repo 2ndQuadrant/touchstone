@@ -20,6 +20,25 @@ testCheckRowFormat() {
 	assertEquals "touchstone-generate-table-data" 4 $?
 }
 
+testChunkNotSpecified() {
+	touchstone-generate-table-data -f two-rows.ddf -c 2
+	assertEquals "touchstone-generate-table-data" 8 $?
+}
+
+testChunkOne() {
+	local TABLE="two-rows"
+	touchstone-generate-table-data -f ${TABLE}.ddf -c 2 -C 1 -o $SHUNIT_TMPDIR
+	ROWS=`wc -l $SHUNIT_TMPDIR/${TABLE}.1.data | cut -d " " -f 1`
+	assertEquals "rows" 1 $ROWS
+}
+
+testChunkTwo() {
+	local TABLE="two-rows"
+	touchstone-generate-table-data -f ${TABLE}.ddf -c 2 -C 2 -o $SHUNIT_TMPDIR
+	ROWS=`wc -l $SHUNIT_TMPDIR/${TABLE}.2.data | cut -d " " -f 1`
+	assertEquals "rows" 1 $ROWS
+}
+
 testDataFileCreated() {
 	local TABLE="two-rows"
 	touchstone-generate-table-data -f ${TABLE}.ddf -o $SHUNIT_TMPDIR
