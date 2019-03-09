@@ -8,6 +8,9 @@
 #include <getopt.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/time.h>
 
 #include "config.h"
 #include "touchstone.h"
@@ -60,6 +63,7 @@ void usage(char *filename)
 	printf("    -d <char> - column delimiter, default <tab>\n");
 	printf("    -f <filename> - data definition file\n");
 	printf("    -o <dir> - location to create data file else use stdout\n");
+	printf("    -s <int> - set seed, default: random\n");
 }
 
 int generate_data(FILE *stream, struct table_definition_t *table,
@@ -253,6 +257,7 @@ void sequence(char *result, long long value)
 int main(int argc, char *argv[])
 {
 	int c;
+	unsigned long long seed = -1;
 	struct table_definition_t table;
 	char datafile[FILENAME_MAX] = "";
 
@@ -279,7 +284,8 @@ int main(int argc, char *argv[])
 			{0, 0, 0, 0,}
 		};
 
-		c = getopt_long(argc, argv, "c:C:d:f:ho:", long_options, &option_index);
+		c = getopt_long(argc, argv, "c:C:d:f:ho:s:",
+				long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -304,6 +310,9 @@ int main(int argc, char *argv[])
 		case 'o':
 			strncpy(outdir, optarg, FILENAME_MAX - 1);
 			break;
+		case 's':
+			seed = atoll(optarg);
+			break;
 		default:
 			printf("?? getopt returned character code 0%o ??\n", c);
 			return 2;
@@ -313,6 +322,13 @@ int main(int argc, char *argv[])
 	if (data_definition_file[0] == '\0') {
 		fprintf(stderr, "ERROR: use -f to specify data definition file\n");
 		return 3;
+	}
+
+	if (seed == -1) {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		seed = getpid();
+		seed ^= tv.tv_sec ^ tv.tv_usec;
 	}
 
 	if (outdir[0] != '\0') {
@@ -363,6 +379,7 @@ int main(int argc, char *argv[])
 	if (c != 0)
 		return 4;
 
+	init_genrand64(seed);
 	c = generate_data(stream, &table, delimiter, chunks, chunk);
 	if (c != 0)
 		return 5;
