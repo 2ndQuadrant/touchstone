@@ -20,23 +20,23 @@ testCheckRowFormat() {
 	assertEquals "touchstone-generate-table-data" 4 $?
 }
 
-testChunkNotSpecified() {
-	touchstone-generate-table-data -f two-rows.ddf -c 2
-	assertEquals "touchstone-generate-table-data" 8 $?
-}
-
-testChunkOne() {
+testChunk1() {
 	local TABLE="two-rows"
 	touchstone-generate-table-data -f ${TABLE}.ddf -c 2 -C 1 -o $SHUNIT_TMPDIR
 	ROWS=`wc -l $SHUNIT_TMPDIR/${TABLE}.1.data | cut -d " " -f 1`
 	assertEquals "rows" 1 $ROWS
 }
 
-testChunkTwo() {
+testChunk1() {
 	local TABLE="two-rows"
 	touchstone-generate-table-data -f ${TABLE}.ddf -c 2 -C 2 -o $SHUNIT_TMPDIR
 	ROWS=`wc -l $SHUNIT_TMPDIR/${TABLE}.2.data | cut -d " " -f 1`
 	assertEquals "rows" 1 $ROWS
+}
+
+testChunkNotSpecified() {
+	touchstone-generate-table-data -f two-rows.ddf -c 2
+	assertEquals "touchstone-generate-table-data" 8 $?
 }
 
 testDataFileCreated() {
@@ -50,8 +50,13 @@ testEmptyDataDefinitionFile() {
 	assertEquals "touchstone-generate-table-data" 4 $?
 }
 
-testInvalidColumnDefinition() {
-	touchstone-generate-table-data -f invalid-column-definition.ddf
+testInvalidColumnDefinitionSequence() {
+	touchstone-generate-table-data -f invalid-column-definition-sequence.ddf
+	assertEquals "touchstone-generate-table-data" 4 $?
+}
+
+testInvalidColumnDefinitionText() {
+	touchstone-generate-table-data -f invalid-column-definition-text.ddf
 	assertEquals "touchstone-generate-table-data" 4 $?
 }
 

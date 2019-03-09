@@ -10,18 +10,29 @@
 #include <limits.h>
 
 #include "config.h"
+#include "touchstone.h"
 
 #define MAX_BUFFER_LEN 1024
 #define MAX_COLS 255
+
+#define TYPE_SEQUENCE 's'
+#define TYPE_TEXT 't'
 
 struct sequence_t
 {
 	long long arg1;
 };
 
+struct text_t
+{
+	int arg1;
+	int arg2;
+};
+
 union arguments_t
 {
 	struct sequence_t sequence;
+	struct text_t text;
 };
 
 struct column_t
@@ -84,10 +95,18 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 			which = stream;
 		for (long long col = 0; col < table->columns; col++) {
 			switch (table->column[col].type) {
-			case 's':
+			case TYPE_SEQUENCE:
 				sequence(str, row +
 						((struct sequence_t *)
 								&table->column[col].arguments)->arg1);
+				fprintf(which, "%s", str);
+				break;
+			case TYPE_TEXT:
+				get_alpha(str,
+						((struct text_t *)
+								&table->column[col].arguments)->arg1,
+						((struct text_t *)
+								&table->column[col].arguments)->arg2);
 				fprintf(which, "%s", str);
 				break;
 			default:
@@ -115,6 +134,7 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 	size_t len = 0;
 	ssize_t nread;
 	int *column;
+	int rc;
 
 	fprintf(stderr, "reading %s\n", filename);
 
@@ -163,14 +183,27 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 
 		table->column[table->columns].type = line[0];
 		switch (line[0]) {
-		case 's':
-			errno = 0;
-			((struct sequence_t *) &table->column[*column].arguments)->arg1 =
-					strtoll(line + 1, NULL, 10);
-			if (errno != 0 || table->rows == 0) {
-				fprintf(stderr,
-						"ERROR: invalid argument to sequence [errno %d]: %s\n",
-						errno, line + 1);
+		case TYPE_SEQUENCE:
+			rc = sscanf(line + 1, "%d",
+					&((struct text_t *)
+							&table->column[*column].arguments)->arg1);
+			if (rc != 1) {
+				fprintf(stderr, "ERROR: invalid argument to sequence: %s\n",
+						line + 1);
+				free(line);
+				fclose(f);
+				return 7;
+			}
+			break;
+		case TYPE_TEXT:
+			rc = sscanf(line + 1, "%d,%d",
+					&((struct text_t *)
+							&table->column[*column].arguments)->arg1,
+					&((struct text_t *)
+							&table->column[*column].arguments)->arg2);
+			if (rc != 2) {
+				fprintf(stderr, "ERROR: invalid argument to text: %s\n",
+						line + 1);
 				free(line);
 				fclose(f);
 				return 7;
