@@ -18,8 +18,15 @@
 #define MAX_BUFFER_LEN 1024
 #define MAX_COLS 255
 
+#define TYPE_INTEGER 'i'
 #define TYPE_SEQUENCE 's'
 #define TYPE_TEXT 't'
+
+struct integer_t
+{
+	long long arg1;
+	long long arg2;
+};
 
 struct sequence_t
 {
@@ -34,6 +41,7 @@ struct text_t
 
 union arguments_t
 {
+	struct integer_t integer;
 	struct sequence_t sequence;
 	struct text_t text;
 };
@@ -77,6 +85,7 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 	long long chunk_size;
 	long long chunk_start = 0;
 	long long last_row;
+	long long ll;
 
 	if (chunks > 1) {
 		chunk_size = table->rows / (long long) chunks;
@@ -99,6 +108,13 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 			which = stream;
 		for (long long col = 0; col < table->columns; col++) {
 			switch (table->column[col].type) {
+			case TYPE_INTEGER:
+				ll = getrand(((struct integer_t *)
+								&table->column[col].arguments)->arg1,
+						((struct integer_t *)
+								&table->column[col].arguments)->arg2);
+				fprintf(which, "%lld", ll);
+				break;
 			case TYPE_SEQUENCE:
 				sequence(str, row +
 						((struct sequence_t *)
@@ -187,6 +203,20 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 
 		table->column[table->columns].type = line[0];
 		switch (line[0]) {
+		case TYPE_INTEGER:
+			rc = sscanf(line + 1, "%lld,%lld",
+					&((struct integer_t *)
+							&table->column[*column].arguments)->arg1,
+					&((struct integer_t *)
+							&table->column[*column].arguments)->arg2);
+			if (rc != 2) {
+				fprintf(stderr, "ERROR: invalid argument to integer: %s\n",
+						line + 1);
+				free(line);
+				fclose(f);
+				return 7;
+			}
+			break;
 		case TYPE_SEQUENCE:
 			rc = sscanf(line + 1, "%d",
 					&((struct text_t *)
