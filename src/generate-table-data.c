@@ -18,9 +18,17 @@
 #define MAX_BUFFER_LEN 1024
 #define MAX_COLS 255
 
+#define TYPE_GAUSSIAN 'g'
 #define TYPE_INTEGER 'i'
 #define TYPE_SEQUENCE 's'
 #define TYPE_TEXT 't'
+
+struct gaussian_t
+{
+	long long arg1;
+	long long arg2;
+	double arg3;
+};
 
 struct integer_t
 {
@@ -41,6 +49,7 @@ struct text_t
 
 union arguments_t
 {
+	struct gaussian_t gaussian;
 	struct integer_t integer;
 	struct sequence_t sequence;
 	struct text_t text;
@@ -108,6 +117,15 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 			which = stream;
 		for (long long col = 0; col < table->columns; col++) {
 			switch (table->column[col].type) {
+			case TYPE_GAUSSIAN:
+				ll = getGaussianRand(((struct gaussian_t *)
+								&table->column[col].arguments)->arg1,
+						((struct gaussian_t *)
+								&table->column[col].arguments)->arg2,
+						((struct gaussian_t *)
+								&table->column[col].arguments)->arg3);
+				fprintf(which, "%lld", ll);
+				break;
 			case TYPE_INTEGER:
 				ll = getrand(((struct integer_t *)
 								&table->column[col].arguments)->arg1,
@@ -203,6 +221,23 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 
 		table->column[table->columns].type = line[0];
 		switch (line[0]) {
+		case TYPE_GAUSSIAN:
+			rc = sscanf(line + 1, "%lld,%lld,%lf",
+					&((struct gaussian_t *)
+							&table->column[*column].arguments)->arg1,
+					&((struct gaussian_t *)
+							&table->column[*column].arguments)->arg2,
+					&((struct gaussian_t *)
+							&table->column[*column].arguments)->arg3);
+			if (rc != 3) {
+				fprintf(stderr,
+						"ERROR: invalid argument to gaussian: %s\n",
+						line + 1);
+				free(line);
+				fclose(f);
+				return 7;
+			}
+			break;
 		case TYPE_INTEGER:
 			rc = sscanf(line + 1, "%lld,%lld",
 					&((struct integer_t *)

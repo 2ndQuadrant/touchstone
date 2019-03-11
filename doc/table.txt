@@ -17,6 +17,8 @@ a sequence of numbers starting from 1.
 
 Column definitions:
 
-i<min>,<max> - Random integer of random length between <min> and <max>
-s<integer> - Sequence starting from <integer>
-t<min>,<max> - Random string of random length between <min> and <max>
+* g<min>,<max>,<probability> - Random integer using gaussian distribution from
+  <min> to <max> with a looping <probability>
+* i<min>,<max> - Random integer of random length between <min> and <max>
+* s<integer> - Sequence starting from <integer>
+* t<min>,<max> - Random string of random length between <min> and <max>
