@@ -17,8 +17,11 @@ a sequence of numbers starting from 1.
 
 Column definitions:
 
+* e<min>,<max>,<probability> - Random integer using exponential distribution
+  from <min> to <max> with a density <probability>
 * g<min>,<max>,<probability> - Random integer using gaussian distribution from
   <min> to <max> with a looping <probability>
 * i<min>,<max> - Random integer of random length between <min> and <max>
+* p<value> - Poisson random number centered on <value>
 * s<integer> - Sequence starting from <integer>
 * t<min>,<max> - Random string of random length between <min> and <max>

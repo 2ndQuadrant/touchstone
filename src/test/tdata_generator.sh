@@ -50,6 +50,11 @@ testEmptyDataDefinitionFile() {
 	assertEquals "touchstone-generate-table-data" 4 $?
 }
 
+testInvalidColumnDefinitionExponential() {
+	touchstone-generate-table-data -f invalid-column-definition-exponential.ddf
+	assertEquals "touchstone-generate-table-data" 4 $?
+}
+
 testInvalidColumnDefinitionGaussian() {
 	touchstone-generate-table-data -f invalid-column-definition-gaussian.ddf
 	assertEquals "touchstone-generate-table-data" 4 $?
@@ -57,6 +62,11 @@ testInvalidColumnDefinitionGaussian() {
 
 testInvalidColumnDefinitionInteger() {
 	touchstone-generate-table-data -f invalid-column-definition-integer.ddf
+	assertEquals "touchstone-generate-table-data" 4 $?
+}
+
+testInvalidColumnDefinitionPoisson() {
+	touchstone-generate-table-data -f invalid-column-definition-poisson.ddf
 	assertEquals "touchstone-generate-table-data" 4 $?
 }
 

@@ -18,10 +18,19 @@
 #define MAX_BUFFER_LEN 1024
 #define MAX_COLS 255
 
+#define TYPE_EXPONENTIAL 'e'
 #define TYPE_GAUSSIAN 'g'
 #define TYPE_INTEGER 'i'
+#define TYPE_POISSON 'p'
 #define TYPE_SEQUENCE 's'
 #define TYPE_TEXT 't'
+
+struct exponential_t
+{
+	long long arg1;
+	long long arg2;
+	double arg3;
+};
 
 struct gaussian_t
 {
@@ -34,6 +43,11 @@ struct integer_t
 {
 	long long arg1;
 	long long arg2;
+};
+
+struct poisson_t
+{
+	long long arg1;
 };
 
 struct sequence_t
@@ -49,8 +63,10 @@ struct text_t
 
 union arguments_t
 {
+	struct exponential_t exponential;
 	struct gaussian_t gaussian;
 	struct integer_t integer;
+	struct poisson_t poisson;
 	struct sequence_t sequence;
 	struct text_t text;
 };
@@ -117,6 +133,15 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 			which = stream;
 		for (long long col = 0; col < table->columns; col++) {
 			switch (table->column[col].type) {
+			case TYPE_EXPONENTIAL:
+				ll = getExponentialRand(((struct exponential_t *)
+								&table->column[col].arguments)->arg1,
+						((struct exponential_t *)
+								&table->column[col].arguments)->arg2,
+						((struct exponential_t *)
+								&table->column[col].arguments)->arg3);
+				fprintf(which, "%lld", ll);
+				break;
 			case TYPE_GAUSSIAN:
 				ll = getGaussianRand(((struct gaussian_t *)
 								&table->column[col].arguments)->arg1,
@@ -131,6 +156,11 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 								&table->column[col].arguments)->arg1,
 						((struct integer_t *)
 								&table->column[col].arguments)->arg2);
+				fprintf(which, "%lld", ll);
+				break;
+			case TYPE_POISSON:
+				ll = getPoissonRand(((struct poisson_t *)
+								&table->column[col].arguments)->arg1);
 				fprintf(which, "%lld", ll);
 				break;
 			case TYPE_SEQUENCE:
@@ -221,6 +251,23 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 
 		table->column[table->columns].type = line[0];
 		switch (line[0]) {
+		case TYPE_EXPONENTIAL:
+			rc = sscanf(line + 1, "%lld,%lld,%lf",
+					&((struct exponential_t *)
+							&table->column[*column].arguments)->arg1,
+					&((struct exponential_t *)
+							&table->column[*column].arguments)->arg2,
+					&((struct exponential_t *)
+							&table->column[*column].arguments)->arg3);
+			if (rc != 3) {
+				fprintf(stderr,
+						"ERROR: invalid argument to exponential: %s\n",
+						line + 1);
+				free(line);
+				fclose(f);
+				return 7;
+			}
+			break;
 		case TYPE_GAUSSIAN:
 			rc = sscanf(line + 1, "%lld,%lld,%lf",
 					&((struct gaussian_t *)
@@ -246,6 +293,19 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 							&table->column[*column].arguments)->arg2);
 			if (rc != 2) {
 				fprintf(stderr, "ERROR: invalid argument to integer: %s\n",
+						line + 1);
+				free(line);
+				fclose(f);
+				return 7;
+			}
+			break;
+		case TYPE_POISSON:
+			rc = sscanf(line + 1, "%lld",
+					&((struct poisson_t *)
+							&table->column[*column].arguments)->arg1);
+			if (rc != 1) {
+				fprintf(stderr,
+						"ERROR: invalid argument to poisson: %s\n",
 						line + 1);
 				free(line);
 				fclose(f);
