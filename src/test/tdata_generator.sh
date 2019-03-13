@@ -50,6 +50,11 @@ testEmptyDataDefinitionFile() {
 	assertEquals "touchstone-generate-table-data" 4 $?
 }
 
+testInvalidColumnDefinitionDate() {
+	touchstone-generate-table-data -f invalid-column-definition-date.ddf
+	assertEquals "touchstone-generate-table-data" 4 $?
+}
+
 testInvalidColumnDefinitionExponential() {
 	touchstone-generate-table-data -f invalid-column-definition-exponential.ddf
 	assertEquals "touchstone-generate-table-data" 4 $?

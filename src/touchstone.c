@@ -21,6 +21,12 @@ void get_alpha(char *str, int min, int max)
 		str[i] = alpha[(int) getrand(0, ALPHA_LEN - 1)];
 }
 
+void get_date(struct tm *tm, time_t tloc1, time_t diff)
+{
+	time_t tloc = tloc1 + getrand(0, diff);
+	localtime_r(&tloc, tm);
+}
+
 int get_days(int year)
 {
 	time_t tloc1, tloc2;

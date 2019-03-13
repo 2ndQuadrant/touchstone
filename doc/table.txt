@@ -17,6 +17,8 @@ a sequence of numbers starting from 1.
 
 Column definitions:
 
+* d<date1>,<date2> - Random date from [<date1>] to (<date2>), where <date1> is
+  inclusive and <date2> is exclusive; format Y-M-D
 * e<min>,<max>,<probability> - Random integer using exponential distribution
   from <min> to <max> with a density <probability>
 * g<min>,<max>,<probability> - Random integer using gaussian distribution from

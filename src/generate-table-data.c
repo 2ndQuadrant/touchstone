@@ -18,12 +18,21 @@
 #define MAX_BUFFER_LEN 1024
 #define MAX_COLS 255
 
+#define TYPE_DATE 'd'
 #define TYPE_EXPONENTIAL 'e'
 #define TYPE_GAUSSIAN 'g'
 #define TYPE_INTEGER 'i'
 #define TYPE_POISSON 'p'
 #define TYPE_SEQUENCE 's'
 #define TYPE_TEXT 't'
+
+struct date_t
+{
+	struct tm arg1;
+	struct tm arg2;
+	time_t tloc1;
+	time_t diff;
+};
 
 struct exponential_t
 {
@@ -63,6 +72,7 @@ struct text_t
 
 union arguments_t
 {
+	struct date_t date;
 	struct exponential_t exponential;
 	struct gaussian_t gaussian;
 	struct integer_t integer;
@@ -111,6 +121,7 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 	long long chunk_start = 0;
 	long long last_row;
 	long long ll;
+	struct tm tm;
 
 	if (chunks > 1) {
 		chunk_size = table->rows / (long long) chunks;
@@ -133,6 +144,14 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 			which = stream;
 		for (long long col = 0; col < table->columns; col++) {
 			switch (table->column[col].type) {
+			case TYPE_DATE:
+				get_date(&tm,
+						((struct date_t *)
+								&table->column[col].arguments)->tloc1,
+						((struct date_t *)
+								&table->column[col].arguments)->diff);
+				fprintf(which, "%d-%d-%d", tm.tm_year, tm.tm_mon, tm.tm_mday);
+				break;
 			case TYPE_EXPONENTIAL:
 				ll = getExponentialRand(((struct exponential_t *)
 								&table->column[col].arguments)->arg1,
@@ -251,6 +270,37 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 
 		table->column[table->columns].type = line[0];
 		switch (line[0]) {
+		case TYPE_DATE:
+			rc = sscanf(line + 1, "%d-%d-%d,%d-%d-%d",
+					&((struct date_t *)
+							&table->column[*column].arguments)->arg1.tm_year,
+					&((struct date_t *)
+							&table->column[*column].arguments)->arg1.tm_mon,
+					&((struct date_t *)
+							&table->column[*column].arguments)->arg1.tm_mday,
+					&((struct date_t *)
+							&table->column[*column].arguments)->arg2.tm_year,
+					&((struct date_t *)
+							&table->column[*column].arguments)->arg2.tm_mon,
+					&((struct date_t *)
+							&table->column[*column].arguments)->arg2.tm_mday);
+			if (rc != 6) {
+				fprintf(stderr,
+						"ERROR: invalid argument to date: %s\n",
+						line + 1);
+				free(line);
+				fclose(f);
+				return 7;
+			}
+			((struct date_t *) &table->column[*column].arguments)->tloc1 =
+					mktime(&((struct date_t *)
+							&table->column[*column].arguments)->arg1);
+			((struct date_t *) &table->column[*column].arguments)->diff =
+					mktime(&((struct date_t *)
+							&table->column[*column].arguments)->arg2) -
+					((struct date_t *)
+							&table->column[*column].arguments)->tloc1;
+			break;
 		case TYPE_EXPONENTIAL:
 			rc = sscanf(line + 1, "%lld,%lld,%lf",
 					&((struct exponential_t *)
@@ -448,6 +498,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERROR: use -f to specify data definition file\n");
 		return 3;
 	}
+
+    /* For ease of testing, work with everything in GMT/UTC. */
+    putenv("TZ=\":GMT\"");
 
 	if (seed == -1) {
 		struct timeval tv;
