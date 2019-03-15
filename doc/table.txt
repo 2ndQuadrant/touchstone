@@ -24,6 +24,10 @@ Column definitions:
 * g<min>,<max>,<probability> - Random integer using gaussian distribution from
   <min> to <max> with a looping <probability>
 * i<min>,<max> - Random integer of random length between <min> and <max>
+* l<filename> - Custom list of random values to select
 * p<value> - Poisson random number centered on <value>
 * s<integer> - Sequence starting from <integer>
 * t<min>,<max> - Random string of random length between <min> and <max>
+
+The list ('l') file format is such that there is one value per line in the
+test file.

@@ -22,6 +22,7 @@
 #define TYPE_EXPONENTIAL 'e'
 #define TYPE_GAUSSIAN 'g'
 #define TYPE_INTEGER 'i'
+#define TYPE_LIST 'l'
 #define TYPE_POISSON 'p'
 #define TYPE_SEQUENCE 's'
 #define TYPE_TEXT 't'
@@ -54,6 +55,13 @@ struct integer_t
 	long long arg2;
 };
 
+struct list_t
+{
+	int size;
+	char filename[FILENAME_MAX];
+	char *line[16];
+};
+
 struct poisson_t
 {
 	long long arg1;
@@ -76,6 +84,7 @@ union arguments_t
 	struct exponential_t exponential;
 	struct gaussian_t gaussian;
 	struct integer_t integer;
+	struct list_t list;
 	struct poisson_t poisson;
 	struct sequence_t sequence;
 	struct text_t text;
@@ -94,6 +103,7 @@ struct table_definition_t
 	struct column_t column[MAX_COLS];
 };
 
+int read_list(struct list_t *);
 void sequence(char *, long long);
 
 void usage(char *filename)
@@ -176,6 +186,13 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 						((struct integer_t *)
 								&table->column[col].arguments)->arg2);
 				fprintf(which, "%lld", ll);
+				break;
+			case TYPE_LIST:
+				fprintf(which, "%s", ((struct list_t *)
+						&table->column[col].arguments)->line[
+								getrand(0, ((struct list_t *)
+										&table->column[col].arguments)->size -
+												1)]);
 				break;
 			case TYPE_POISSON:
 				ll = getPoissonRand(((struct poisson_t *)
@@ -342,12 +359,32 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 					&((struct integer_t *)
 							&table->column[*column].arguments)->arg2);
 			if (rc != 2) {
-				fprintf(stderr, "ERROR: invalid argument to integer: %s\n",
+				fprintf(stderr,
+						"ERROR: invalid argument to integer: %s\n", line + 1);
+				free(line);
+				fclose(f);
+				return 7;
+			}
+			break;
+		case TYPE_LIST:
+			memset(((struct list_t *) &table->column[*column].arguments),
+					0, sizeof(struct list_t));
+			rc = sscanf(line + 1, "%s",
+					((struct list_t *)
+							&table->column[*column].arguments)->filename);
+			if (rc != 1) {
+				fprintf(stderr, "ERROR: invalid argument to list: %s\n",
 						line + 1);
 				free(line);
 				fclose(f);
 				return 7;
 			}
+
+			rc = read_list((struct list_t *)
+					&table->column[*column].arguments);
+			if (rc != 0)
+				return 7;
+
 			break;
 		case TYPE_POISSON:
 			rc = sscanf(line + 1, "%lld",
@@ -367,8 +404,8 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 					&((struct text_t *)
 							&table->column[*column].arguments)->arg1);
 			if (rc != 1) {
-				fprintf(stderr, "ERROR: invalid argument to sequence: %s\n",
-						line + 1);
+				fprintf(stderr,
+						"ERROR: invalid argument to sequence: %s\n", line + 1);
 				free(line);
 				fclose(f);
 				return 7;
@@ -413,6 +450,36 @@ int read_data_definition_file(struct table_definition_t *table, char *filename)
 	}
 
 	fprintf(stderr, "%d column(s)\n", *column);
+
+	return 0;
+}
+
+int read_list(struct list_t *list)
+{
+	FILE *f;
+	size_t len = 0;
+	ssize_t nread;
+
+	f = fopen(list->filename, "r");
+	if (f == NULL) {
+		fprintf(stderr, "ERROR: cannot open list file: %s\n", list->filename);
+		return 1;
+	}
+
+#ifdef ENABLE_CASSERT
+	fprintf(stderr, "reading list file: %s\n", list->filename);
+#endif /* ENABLE_CASSERT */
+
+	list->size = 0;
+	while ((nread = getline(&list->line[list->size], &len, f)) != -1) {
+		list->line[list->size][nread - 1] = '\0';
+#ifdef ENABLE_CASSERT
+		fprintf(stderr, "%s\n", list->line[list->size]);
+#endif /* ENABLE_CASSERT */
+		++list->size;
+		len = 0;
+	}
+	fclose(f);
 
 	return 0;
 }

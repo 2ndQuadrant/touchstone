@@ -29,3 +29,5 @@ src/test/*
 !/src/test/*.sh
 !/src/test/*.sql
 !/src/test/*.ddf
+!/src/test/*.txt
+src/test/CMakeCache.txt

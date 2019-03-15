@@ -85,6 +85,11 @@ testInvalidColumnDefinitionText() {
 	assertEquals "touchstone-generate-table-data" 4 $?
 }
 
+testListFileDoesNotExist() {
+	touchstone-generate-table-data -f list-does-not-exist.ddf
+	assertEquals "touchstone-generate-table-data" 4 $?
+}
+
 testMissingDataDefinitionFile() {
 	touchstone-generate-table-data -f doesnotexist
 	assertEquals "touchstone-generate-table-data" 4 $?
