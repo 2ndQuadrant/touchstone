@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright 2017-2018 PostgreSQL Global Development Group
+# Copyright 2017-2019 PostgreSQL Global Development Group
 #
 
 usage() {
@@ -67,13 +67,13 @@ if [ $STOP -eq 1 ]; then
 
 	SARDIR="$OUTDIR/sar"
 	mkdir -p $SARDIR
-	$SADF -P ALL $FILE > $SARDIR/sar-cpu.csv
-	$SADF $FILE -- -B > $SARDIR/sar-paging.csv
-	$SADF $FILE -- -d -p > $SARDIR/sar-blockdev.csv
-	$SADF $FILE -- -R > $SARDIR/sar-mem1.csv
-	$SADF $FILE -- -r > $SARDIR/sar-mem2.csv
-	$SADF $FILE -- -W > $SARDIR/sar-swap.csv
-	$SADF $FILE -- -n DEV > $SARDIR/sar-net.csv
+	$SADF -P ALL $RAWSARFILE > $SARDIR/sar-cpu.csv
+	$SADF $RAWSARFILE -- -B > $SARDIR/sar-paging.csv
+	$SADF $RAWSARFILE -- -d -p > $SARDIR/sar-blockdev.csv
+	$SADF $RAWSARFILE -- -R > $SARDIR/sar-mem1.csv
+	$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem2.csv
+	$SADF $RAWSARFILE -- -W > $SARDIR/sar-swap.csv
+	$SADF $RAWSARFILE -- -n DEV > $SARDIR/sar-net.csv
 
 	exit 0
 fi
