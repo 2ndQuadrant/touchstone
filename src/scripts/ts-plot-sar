@@ -33,6 +33,26 @@ plot_blockdev_rd() {
 	__EOF__
 }
 
+plot_blockdev_tps() {
+	local FILE=$1
+	local PLOTLINES=$2
+
+	gnuplot <<- __EOF__
+		set datafile separator ";"
+		set title "Block Device Transactions"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output '$FILE'
+		set xlabel "Time"
+		set ylabel "tps"
+		set xtics rotate
+		set key below
+		set grid
+		plot $PLOTLINES
+	__EOF__
+}
+
 plot_blockdev_util() {
 	local FILE=$1
 	local PLOTLINES=$2
@@ -82,6 +102,7 @@ plot_blockdev() {
 	local CSVFILE="sar-blockdev.csv"
 	local DATAFILES=""
 	local RDPLOTLINES=""
+	local TPSPLOTLINES=""
 	local UTILPLOTLINES=""
 	local WDPLOTLINES=""
 
@@ -100,6 +121,15 @@ plot_blockdev() {
 		THISPLOTLINE=" $THISPLOTLINE title \"$DEV\" with lines"
 		RDPLOTLINES="$RDPLOTLINES $THISPLOTLINE"
 		plot_blockdev_rd $PLOTFILE "$THISPLOTLINE"
+
+		local PLOTFILE="blockdev/sar-per-blockdev-tps-${DEV}.png"
+		if [ ! "x$TPSPLOTLINES" = "x" ]; then
+			TPSPLOTLINES="$TPSPLOTLINES,"
+		fi
+		THISPLOTLINE=" \"$DATAFILE\" using 3:5"
+		THISPLOTLINE=" $THISPLOTLINE title \"$DEV\" with lines"
+		TPSPLOTLINES="$TPSPLOTLINES $THISPLOTLINE"
+		plot_blockdev_tps $PLOTFILE "$THISPLOTLINE"
 
 		local PLOTFILE="blockdev/sar-per-blockdev-util-${DEV}.png"
 		if [ ! "x$UTILPLOTLINES" = "x" ]; then
@@ -120,6 +150,7 @@ plot_blockdev() {
 		plot_blockdev_wd $PLOTFILE "$THISPLOTLINE"
 	done
 	plot_blockdev_rd 'sar-per-blockdev-rd.png' "$RDPLOTLINES"
+	plot_blockdev_tps 'sar-per-blockdev-tps.png' "$TPSPLOTLINES"
 	plot_blockdev_util 'sar-per-blockdev-util.png' "$UTILPLOTLINES"
 	plot_blockdev_wd 'sar-per-blockdev-wd.png' "$WDPLOTLINES"
 
