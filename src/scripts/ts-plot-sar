@@ -1,13 +1,16 @@
 #!/bin/sh
 #
-# Copyright 2018 PostgreSQL Global Development Group
+# Copyright 2018,2019 PostgreSQL Global Development Group
 #
+
+SIZE="800,500"
 
 usage() {
 	echo "Usage: `basename $0` <options>"
 	echo
 	echo "Options:"
 	echo "  -i <path>  Path to sar data"
+	echo "  -s <x,y>   Size of charts, default 800x500"
 }
 
 plot_blockdev() {
@@ -34,7 +37,7 @@ plot_blockdev() {
 		set title "Block Device Utilization"
 		set xdata time
 		set timefmt "%s"
-		set terminal pngcairo size 800,500
+		set terminal pngcairo size $SIZE
 		set output 'sar-per-blockdev.png'
 		set xlabel "Time"
 		set ylabel "% Utilization"
@@ -61,7 +64,7 @@ plot_cpu() {
 		set title "Processor Utilization"
 		set xdata time
 		set timefmt "%s"
-		set terminal pngcairo size 800,500
+		set terminal pngcairo size $SIZE
 		set output 'sar-cpu.png'
 		set xlabel "Time"
 		set ylabel "% Utilization"
@@ -97,7 +100,7 @@ plot_cpu() {
 		set title "Per Processor Utilization"
 		set xdata time
 		set timefmt "%s"
-		set terminal pngcairo size 800,500
+		set terminal pngcairo size $SIZE
 		set output 'sar-per-cpu.png'
 		set xlabel "Time"
 		set ylabel "% Utilization"
@@ -118,7 +121,7 @@ plot_swap() {
 		set title "Swapping Activity"
 		set xdata time
 		set timefmt "%s"
-		set terminal pngcairo size 800,500
+		set terminal pngcairo size $SIZE
 		set output 'sar-swapping.png'
 		set xlabel "Time"
 		set ylabel "pages / s"
@@ -133,7 +136,7 @@ plot_swap() {
 }
 
 SARDIR=""
-while getopts "hi:" OPT; do
+while getopts "hi:s:" OPT; do
 	case $OPT in
 	h)
 		usage
@@ -141,6 +144,9 @@ while getopts "hi:" OPT; do
 		;;
 	i)
 		SARDIR=$OPTARG
+		;;
+	s)
+		SIZE=$OPTARG
 		;;
 	esac
 done
