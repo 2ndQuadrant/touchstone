@@ -13,40 +13,54 @@ usage() {
 	echo "  -s <x,y>   Size of charts, default 800x500"
 }
 
-plot_blockdev() {
-	local CSVFILE="sar-blockdev.csv"
+plot_blockdev_util() {
+	local FILE=$1
+	local PLOTLINES=$2
 
-	# Plot % util on a single chart for all devices
-
-	local DATAFILES=""
-	local GNUPLOTLINE=""
-	local DEVICES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort | uniq`
-	for DEV in $DEVICES; do
-		local DATAFILE=`tempfile`
-		DATAFILES="$DATAFILES $DATAFILE"
-		awk -F ";" "NR == 1 || \$4 == \"$DEV\"" $CSVFILE > $DATAFILE
-
-		if [ ! "x$GNUPLOTLINE" = "x" ]; then
-			GNUPLOTLINE="$GNUPLOTLINE,"
-		fi
-		GNUPLOTLINE="$GNUPLOTLINE \"$DATAFILE\" using 3:12"
-		GNUPLOTLINE="$GNUPLOTLINE title \"$DEV\" with lines"
-	done
 	gnuplot <<- __EOF__
 		set datafile separator ";"
 		set title "Block Device Utilization"
 		set xdata time
 		set timefmt "%s"
 		set terminal pngcairo size $SIZE
-		set output 'sar-per-blockdev.png'
+		set output '$FILE'
 		set xlabel "Time"
 		set ylabel "% Utilization"
 		set yrange [0:100]
 		set xtics rotate
 		set key below
 		set grid
-		plot $GNUPLOTLINE
+		plot $PLOTLINES
 	__EOF__
+}
+
+plot_blockdev() {
+	# Plot % util
+
+	mkdir -p blockdev
+
+	local CSVFILE="sar-blockdev.csv"
+	local DATAFILES=""
+	local UTILPLOTLINES=""
+
+	local DEVICES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort | uniq`
+	for DEV in $DEVICES; do
+		local DATAFILE=`tempfile`
+
+		DATAFILES="$DATAFILES $DATAFILE"
+		awk -F ";" "NR == 1 || \$4 == \"$DEV\"" $CSVFILE > $DATAFILE
+
+		local PLOTFILE="blockdev/sar-per-blockdev-util-${DEV}.png"
+		if [ ! "x$UTILPLOTLINES" = "x" ]; then
+			UTILPLOTLINES="$UTILPLOTLINES,"
+		fi
+		THISPLOTLINE=" \"$DATAFILE\" using 3:12"
+		THISPLOTLINE=" $THISPLOTLINE title \"$DEV\" with lines"
+		UTILPLOTLINES="$UTILPLOTLINES $THISPLOTLINE"
+		plot_blockdev_util $PLOTFILE "$THISPLOTLINE"
+	done
+	plot_blockdev_util 'sar-per-blockdev-util.png' "$UTILPLOTLINES"
+
 	rm -f $DATAFILES
 }
 
