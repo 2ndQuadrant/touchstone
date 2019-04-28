@@ -13,6 +13,26 @@ usage() {
 	echo "  -s <x,y>   Size of charts, default 800x500"
 }
 
+plot_blockdev_rd() {
+	local FILE=$1
+	local PLOTLINES=$2
+
+	gnuplot <<- __EOF__
+		set datafile separator ";"
+		set title "Block Device Reads"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output '$FILE'
+		set xlabel "Time"
+		set ylabel "sec/s"
+		set xtics rotate
+		set key below
+		set grid
+		plot $PLOTLINES
+	__EOF__
+}
+
 plot_blockdev_util() {
 	local FILE=$1
 	local PLOTLINES=$2
@@ -35,12 +55,13 @@ plot_blockdev_util() {
 }
 
 plot_blockdev() {
-	# Plot % util
+	# Plot % util, reads
 
 	mkdir -p blockdev
 
 	local CSVFILE="sar-blockdev.csv"
 	local DATAFILES=""
+	local RDPLOTLINES=""
 	local UTILPLOTLINES=""
 
 	local DEVICES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort | uniq`
@@ -49,6 +70,15 @@ plot_blockdev() {
 
 		DATAFILES="$DATAFILES $DATAFILE"
 		awk -F ";" "NR == 1 || \$4 == \"$DEV\"" $CSVFILE > $DATAFILE
+
+		local PLOTFILE="blockdev/sar-per-blockdev-rd-${DEV}.png"
+		if [ ! "x$RDPLOTLINES" = "x" ]; then
+			RDPLOTLINES="$RDPLOTLINES,"
+		fi
+		THISPLOTLINE=" \"$DATAFILE\" using 3:6"
+		THISPLOTLINE=" $THISPLOTLINE title \"$DEV\" with lines"
+		RDPLOTLINES="$RDPLOTLINES $THISPLOTLINE"
+		plot_blockdev_rd $PLOTFILE "$THISPLOTLINE"
 
 		local PLOTFILE="blockdev/sar-per-blockdev-util-${DEV}.png"
 		if [ ! "x$UTILPLOTLINES" = "x" ]; then
@@ -59,6 +89,7 @@ plot_blockdev() {
 		UTILPLOTLINES="$UTILPLOTLINES $THISPLOTLINE"
 		plot_blockdev_util $PLOTFILE "$THISPLOTLINE"
 	done
+	plot_blockdev_rd 'sar-per-blockdev-rd.png' "$RDPLOTLINES"
 	plot_blockdev_util 'sar-per-blockdev-util.png' "$UTILPLOTLINES"
 
 	rm -f $DATAFILES
