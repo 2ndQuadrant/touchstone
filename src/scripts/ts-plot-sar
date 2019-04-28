@@ -222,7 +222,7 @@ plot_cpu() {
 
 plot_swap() {
 	gnuplot <<- __EOF__
-		datafile = "sar-paging.csv"
+		datafile = "sar-swap.csv"
 		set datafile commentschar ""
 		set datafile separator ";"
 		set title "Swapping Activity"
