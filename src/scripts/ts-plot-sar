@@ -54,8 +54,28 @@ plot_blockdev_util() {
 	__EOF__
 }
 
+plot_blockdev_wd() {
+	local FILE=$1
+	local PLOTLINES=$2
+
+	gnuplot <<- __EOF__
+		set datafile separator ";"
+		set title "Block Device Writes"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output '$FILE'
+		set xlabel "Time"
+		set ylabel "sec/s"
+		set xtics rotate
+		set key below
+		set grid
+		plot $PLOTLINES
+	__EOF__
+}
+
 plot_blockdev() {
-	# Plot % util, reads
+	# Plot % util, reads, writes
 
 	mkdir -p blockdev
 
@@ -63,6 +83,7 @@ plot_blockdev() {
 	local DATAFILES=""
 	local RDPLOTLINES=""
 	local UTILPLOTLINES=""
+	local WDPLOTLINES=""
 
 	local DEVICES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort | uniq`
 	for DEV in $DEVICES; do
@@ -88,9 +109,19 @@ plot_blockdev() {
 		THISPLOTLINE=" $THISPLOTLINE title \"$DEV\" with lines"
 		UTILPLOTLINES="$UTILPLOTLINES $THISPLOTLINE"
 		plot_blockdev_util $PLOTFILE "$THISPLOTLINE"
+
+		local PLOTFILE="blockdev/sar-per-blockdev-wd-${DEV}.png"
+		if [ ! "x$WDPLOTLINES" = "x" ]; then
+			WDPLOTLINES="$WDPLOTLINES,"
+		fi
+		THISPLOTLINE=" \"$DATAFILE\" using 3:7"
+		THISPLOTLINE=" $THISPLOTLINE title \"$DEV\" with lines"
+		WDPLOTLINES="$WDPLOTLINES $THISPLOTLINE"
+		plot_blockdev_wd $PLOTFILE "$THISPLOTLINE"
 	done
 	plot_blockdev_rd 'sar-per-blockdev-rd.png' "$RDPLOTLINES"
 	plot_blockdev_util 'sar-per-blockdev-util.png' "$UTILPLOTLINES"
+	plot_blockdev_wd 'sar-per-blockdev-wd.png' "$WDPLOTLINES"
 
 	rm -f $DATAFILES
 }
