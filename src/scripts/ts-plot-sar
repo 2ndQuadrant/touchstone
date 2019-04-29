@@ -13,6 +13,28 @@ usage() {
 	echo "  -s <x,y>   Size of charts, default 800x500"
 }
 
+plot_blockdev_io() {
+	local FILE=$1
+	local PLOTLINES=$2
+	local DEV=$3
+
+	gnuplot <<- __EOF__
+		set datafile separator ";"
+		set title "Block Device I/O $DEV"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output '$FILE'
+		set xlabel "Time"
+		set ylabel "sec/s"
+		set yrange [0:*]
+		set xtics rotate
+		set key below
+		set grid
+		plot $PLOTLINES
+	__EOF__
+}
+
 plot_blockdev_rd() {
 	local FILE=$1
 	local PLOTLINES=$2
@@ -104,6 +126,7 @@ plot_blockdev() {
 
 	local CSVFILE="sar-blockdev.csv"
 	local DATAFILES=""
+	local IOPLOTLINES=""
 	local RDPLOTLINES=""
 	local TPSPLOTLINES=""
 	local UTILPLOTLINES=""
@@ -115,6 +138,17 @@ plot_blockdev() {
 
 		DATAFILES="$DATAFILES $DATAFILE"
 		awk -F ";" "NR == 1 || \$4 == \"$DEV\"" $CSVFILE > $DATAFILE
+
+		local PLOTFILE="blockdev/sar-per-blockdev-io-${DEV}.png"
+		if [ ! "x$IOPLOTLINES" = "x" ]; then
+			IOPLOTLINES="$IOPLOTLINES,"
+		fi
+		THISPLOTLINE=" \"$DATAFILE\" using 3:6"
+		THISPLOTLINE=" $THISPLOTLINE title \"Reads\" with lines, "
+		THISPLOTLINE=" $THISPLOTLINE \"$DATAFILE\" using 3:7"
+		THISPLOTLINE=" $THISPLOTLINE title \"Writes\" with lines"
+		IOPLOTLINES="$IOPLOTLINES $THISPLOTLINE"
+		plot_blockdev_io $PLOTFILE "$THISPLOTLINE" $DEV
 
 		local PLOTFILE="blockdev/sar-per-blockdev-rd-${DEV}.png"
 		if [ ! "x$RDPLOTLINES" = "x" ]; then
