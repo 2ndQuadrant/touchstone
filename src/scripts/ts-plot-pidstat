@@ -36,8 +36,31 @@ plot_cpu() {
 		set grid
 		plot datafile using 1:7 title columnheader(21) with lines
 	__EOF__
+}
 
-	rm -f $DATAFILES
+plot_io() {
+	local PID=$1
+	local DATAFILE=$2
+
+	local PIDDIR="pidstat-io"
+	mkdir -p $PIDDIR
+
+	gnuplot <<- __EOF__
+		datafile = "$DATAFILE"
+		set title "Disk I/O"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output "$PIDDIR/pidstat-io-$PID.png"
+		set xlabel "Time"
+		set ylabel "kB/s"
+		set yrange [0:*]
+		set xtics rotate
+		set key below
+		set grid
+		plot datafile using 1:16 title 'Reads:'.columnhead(21) with lines, \
+			datafile using 1:17 title 'Writes:'.columnhead(21) with lines
+	__EOF__
 }
 
 plot() {
@@ -51,6 +74,7 @@ plot() {
 		awk -v pid="$PID" '$3 == pid' $CSVFILE > $DATAFILE
 
 		plot_cpu $PID $DATAFILE
+		plot_io $PID $DATAFILE
 	done
 
 	rm -f $DATAFILES
