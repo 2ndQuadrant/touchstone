@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+# Copyright 2019 PostgreSQL Global Development Group
+#
+
+CSVFILE="pidstat.txt"
+SIZE="800,500"
+
+usage() {
+	echo "Usage: `basename $0` <options>"
+	echo
+	echo "Options:"
+	echo "  -i <path>  Path to pidstat data"
+	echo "  -s <x,y>   Size of charts, default 800x500"
+}
+
+plot_cpu() {
+	local PID=$1
+	local DATAFILE=$2
+
+	local PIDDIR="pidstat-cpu"
+	mkdir -p $PIDDIR
+
+	gnuplot <<- __EOF__
+		datafile = "$DATAFILE"
+		set title "Processor Utilization"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output "$PIDDIR/pidstat-cpu-$PID.png"
+		set xlabel "Time"
+		set ylabel "% Utilization"
+		set yrange [0:100]
+		set xtics rotate
+		set key below
+		set grid
+		plot datafile using 1:7 title columnheader(21) with lines
+	__EOF__
+
+	rm -f $DATAFILES
+}
+
+plot() {
+	# We're getting PIDs, but since pidstat format isn't especially friendly,
+	# we need to remove UID.
+	local PIDS=`awk 'NR > 1 {print $3}' $CSVFILE | sort -n | uniq | grep -v UID`
+	for PID in $PIDS; do
+		local DATAFILE=`tempfile`
+		DATAFILES="$DATAFILES $DATAFILE"
+
+		awk -v pid="$PID" '$3 == pid' $CSVFILE > $DATAFILE
+
+		plot_cpu $PID $DATAFILE
+	done
+
+	rm -f $DATAFILES
+}
+
+PIDSTATDIR=""
+while getopts "hi:s:" OPT; do
+	case $OPT in
+	h)
+		usage
+		exit 0
+		;;
+	i)
+		PIDSTATDIR=$OPTARG
+		;;
+	s)
+		SIZE=$OPTARG
+		;;
+	esac
+done
+
+if [ -z "$PIDSTATDIR" ]; then
+	echo "ERROR: Specify pidstat directory with -i"
+	exit 1
+fi
+
+if [ ! -f "$PIDSTATDIR/$CSVFILE" ]; then
+	echo "ERROR: $CSVFILE does not exist in $PIDSTATDIR"
+	exit 2
+fi
+
+which gnuplot > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+	echo "WARNING: gnuplot not in path, pidstat charts not created"
+	exit 0
+fi
+
+(cd $PIDSTATDIR && plot)
+
+exit 0
