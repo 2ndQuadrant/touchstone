@@ -26,6 +26,7 @@ plot_blockdev_rd() {
 		set output '$FILE'
 		set xlabel "Time"
 		set ylabel "sec/s"
+		set yrange [0:*]
 		set xtics rotate
 		set key below
 		set grid
@@ -46,6 +47,7 @@ plot_blockdev_tps() {
 		set output '$FILE'
 		set xlabel "Time"
 		set ylabel "tps"
+		set yrange [0:*]
 		set xtics rotate
 		set key below
 		set grid
@@ -87,6 +89,7 @@ plot_blockdev_wd() {
 		set output '$FILE'
 		set xlabel "Time"
 		set ylabel "sec/s"
+		set yrange [0:*]
 		set xtics rotate
 		set key below
 		set grid
@@ -232,6 +235,7 @@ plot_swap() {
 		set output 'sar-swapping.png'
 		set xlabel "Time"
 		set ylabel "pages / s"
+		set yrange [0:*]
 		set xtics rotate
 		set key below
 		set grid
