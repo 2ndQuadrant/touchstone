@@ -257,6 +257,46 @@ plot_cpu() {
 	rm -f $DATAFILES
 }
 
+plot_net_kb() {
+	local FILE=$1
+	local IFACE=$2
+
+	gnuplot <<- __EOF__
+		datafile = "$DATAFILE"
+		set datafile separator ";"
+		set title "Network Interface $IFACE"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output "iface/sar-net-kb-${IFACE}.png"
+		set xlabel "Time"
+		set ylabel "kB/s"
+		set yrange [0:*]
+		set xtics rotate
+		set key below
+		set grid
+		plot datafile using 3:7 title 'rx' with lines, \
+			datafile using 3:8 title 'tx' with lines
+	__EOF__
+}
+
+plot_net() {
+	local CSVFILE="sar-net.csv"
+
+	mkdir -p iface
+
+	local IFACES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort -n | uniq`
+	for IFACE in $IFACES; do
+		local DATAFILE=`tempfile`
+
+		DATAFILES="$DATAFILES $DATAFILE"
+		awk -F ";" "NR == 1 || \$4 == \"$IFACE\"" $CSVFILE > $DATAFILE
+
+		plot_net_kb $DATAFILE $IFACE
+	done
+	rm -f $DATAFILES
+}
+
 plot_swap() {
 	gnuplot <<- __EOF__
 		datafile = "sar-swap.csv"
@@ -309,6 +349,7 @@ fi
 
 (cd $SARDIR && plot_blockdev)
 (cd $SARDIR && plot_cpu)
+(cd $SARDIR && plot_net)
 (cd $SARDIR && plot_swap)
 
 exit 0
