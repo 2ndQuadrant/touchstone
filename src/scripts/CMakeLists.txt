@@ -1,4 +1,9 @@
 ADD_SUBDIRECTORY(pgsql)
-INSTALL(PROGRAMS ts-plot-queries DESTINATION "${INSTALLDEST}/bin")
-INSTALL(PROGRAMS ts-plot-sar DESTINATION "${INSTALLDEST}/bin")
-INSTALL(PROGRAMS ts-sysstat DESTINATION "${INSTALLDEST}/bin")
+set(SRC_SCRIPTS_DIR ${CMAKE_SOURCE_DIR}/src/scripts)
+set(
+    SRC_SCRIPTS_PROGRAMS
+    ${CMAKE_SOURCE_DIR}/src/scripts/ts-plot-queries
+    ${CMAKE_SOURCE_DIR}/src/scripts/ts-plot-sar
+    ${CMAKE_SOURCE_DIR}/src/scripts/ts-sysstat
+)
+install(PROGRAMS ${SRC_SCRIPTS_PROGRAMS} DESTINATION "bin")

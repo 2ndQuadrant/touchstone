@@ -3,13 +3,18 @@
 # Copyright 2017 PostgreSQL Global Development Group
 #
 
-testGenerateQuery() {
+oneTimeSetUp() {
+	export PATH=$PWD/../bin:/usr/bin:/bin
 	export LD_LIBRARY_PATH=".."
+	export HOMEDIR=`dirname $0`
+}
 
-	./tgenerate_plan ../../config/pgsql.conf q1.sql p1.out
+testGenerateQuery() {
+	./tgenerate_plan ${HOMEDIR}/../../config/pgsql.conf ${HOMEDIR}/q1.sql \
+			p1.out
 	assertEquals "success" 0 $?
 
-	diff -q p1.expected p1.out
+	diff -q ${HOMEDIR}/p1.expected p1.out
 	assertEquals "diff" 0 $?
 }
 

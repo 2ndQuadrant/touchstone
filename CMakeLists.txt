@@ -2,12 +2,18 @@ cmake_minimum_required(VERSION 2.8)
 
 project(touchstone C)
 
-SET(${PROJECT_NAME}_VERSION_MAJOR 0)
-SET(${PROJECT_NAME}_VERSION_MINOR 1)
+set(PROJECT_VERSION_MAJOR 0)
+set(PROJECT_VERSION_MINOR 1)
+set(PROJECT_VERSION_PATCH 0)
+set(
+    PROJECT_VERSION
+    ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
+)
 
 ENABLE_TESTING()
 
 SET(CMAKE_C_FLAGS "-g -Wall")
+SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 IF(ENABLE_CASSERT EQUAL 1)
 	SET(ENABLE_CASSERT 1)
@@ -16,3 +22,68 @@ ELSE()
 ENDIF(ENABLE_CASSERT EQUAL 1)
 
 ADD_SUBDIRECTORY(src)
+
+# CPack rules for creating distribution files.
+
+include(InstallRequiredSystemLibraries)
+
+set(CPACK_SOURCE_GENERATOR "TBZ2;TXZ;ZIP")
+set(
+    CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "a test or criterion for determining quality"
+)
+set(CPACK_PACKAGE_VENDOR "touchstone")
+set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+set(CPACK_SOURCE_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}")
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "\\\\.bz2\\$;\\\\.gz\\$;\\\\.xz\\$;\\\\.Z\\$;\\\\.zip\\$"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "${CPACK_SOURCE_IGNORE_FILES};/CMakeCache\\\\.txt\\$"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "${CPACK_SOURCE_IGNORE_FILES};/CMakeFiles/"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "${CPACK_SOURCE_IGNORE_FILES};/cmake_install\\\\.cmake\\$"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "${CPACK_SOURCE_IGNORE_FILES};/CPackConfig\\\\.cmake\\$"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "${CPACK_SOURCE_IGNORE_FILES};/\\\\.gitignore\\$"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "${CPACK_SOURCE_IGNORE_FILES};/\\\\_CPack\\\\_Packages/"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "${CPACK_SOURCE_IGNORE_FILES};/CPackSourceConfig\\\\.cmake\\$"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "${CPACK_SOURCE_IGNORE_FILES};/CTestTestfile\\\\.cmake\\$"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+    "${CPACK_SOURCE_IGNORE_FILES};/Makefile\\$"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+	"${CPACK_SOURCE_IGNORE_FILES};/README.git\\$"
+)
+set(
+    CPACK_SOURCE_IGNORE_FILES
+	"${CPACK_SOURCE_IGNORE_FILES};/touchstone-dss/"
+)
+
+include(CPack)

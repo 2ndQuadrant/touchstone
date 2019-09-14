@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
 #include <getopt.h>
 #include <errno.h>
 #include <limits.h>
@@ -578,7 +579,7 @@ int main(int argc, char *argv[])
 
 	if (outdir[0] != '\0') {
 		/* Naively remove any extension to the data definition file. */
-		strncpy(tmp, data_definition_file, FILENAME_MAX -1);
+		strncpy(tmp, basename(data_definition_file), FILENAME_MAX - 1);
 		p = strstr(tmp, ".");
 		*p = '\0';
 

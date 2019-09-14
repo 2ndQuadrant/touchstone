@@ -1,1 +1,6 @@
-INSTALL(PROGRAMS ts-pgsql-stat DESTINATION "${INSTALLDEST}/bin")
+install(
+    PROGRAMS
+    ${CMAKE_SOURCE_DIR}/src/scripts/pgsql/ts-pgsql-stat
+    DESTINATION
+    "bin"
+)

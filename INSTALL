@@ -1,7 +1,7 @@
 Installing
 ==========
 
-    cmake CMakeLists.txt -DCMAKE_INSTALL_PREFIX=/usr/local
+    cmake CMakeLists.txt
     make
     make install
 
