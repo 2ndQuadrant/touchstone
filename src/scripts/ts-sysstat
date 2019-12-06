@@ -95,6 +95,26 @@ if [ $STOP -eq 1 ]; then
 	$SADF $RAWSARFILE -- -W > $SARDIR/sar-swap.csv
 	$SADF $RAWSARFILE -- -n DEV > $SARDIR/sar-net.csv
 
+	# Use sadf to generate svg charts if that options is avaialble.
+	SADF="sadf -g"
+	$SADF -P ALL $RAWSARFILE > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		exit 0
+	fi
+	$SADF -P ALL $RAWSARFILE > $SARDIR/sar-cpu.svg
+	$SADF $RAWSARFILE -- -B > $SARDIR/sar-paging.svg
+	$SADF $RAWSARFILE -- -d -p > $SARDIR/sar-blockdev.svg
+	# The -R flag was removed in v11.5.4
+	$SADF 1 1 $RAWSARFILE -- -R > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		$SADF $RAWSARFILE -- -R > $SARDIR/sar-mem1.svg
+		$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem2.svg
+	else
+		$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem.svg
+	fi
+	$SADF $RAWSARFILE -- -W > $SARDIR/sar-swap.svg
+	$SADF $RAWSARFILE -- -n DEV > $SARDIR/sar-net.svg
+
 	exit 0
 fi
 
