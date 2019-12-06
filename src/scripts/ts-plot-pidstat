@@ -36,6 +36,9 @@ plot_cpu() {
 		set grid
 		plot datafile using 1:7 title columnheader(21) with lines
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 }
 
 plot_io() {
@@ -61,6 +64,9 @@ plot_io() {
 		plot datafile using 1:16 title 'Reads:'.columnhead(21) with lines, \
 			datafile using 1:17 title 'Writes:'.columnhead(21) with lines
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 }
 
 plot() {

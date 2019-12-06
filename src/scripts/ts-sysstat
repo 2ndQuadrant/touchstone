@@ -7,8 +7,9 @@ usage() {
 	echo "Usage: `basename $0` <options>"
 	echo
 	echo "Options:"
-	echo "  -o <path>  Path to save results"
-	echo "  -s         Kill all stat collection processes with pids in -o <path>"
+	echo "  -i <interval>  Interval (seconds) between samples, default 60"
+	echo "  -o <path>      Path to save results"
+	echo "  -s             Kill all stat collection processes with pids in -o <path>"
 }
 
 SARPIDFILE=""
@@ -18,11 +19,15 @@ RAWSARFILE=""
 OUTDIR=""
 SAMPLE_LENGTH=60
 STOP=0
-while getopts "ho:s" OPT; do
+while getopts "hi:o:s" OPT; do
 	case $OPT in
 	h)
 		usage
 		exit 0
+		;;
+	i)
+		# FIXME: Test for valid integer
+		SAMPLE_LENGTH=$OPTARG
 		;;
 	o)
 		OUTDIR=$OPTARG
@@ -51,16 +56,25 @@ if [ $STOP -eq 1 ]; then
 
 	which sadf > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
-		SADF="sadf -d -U"
-		$SADF 1 1 > /dev/null 2>&1
-		if [ $? -ne 0 ]; then
-			SADF="sadf -D"
-			$SADF 1 1 > /dev/null 2>&1
-			if [ $? -ne 0 ]; then
-				echo "WARNING: Was not able to determine proper sadf flags"
-				SADF="true"
+		# Make some reasonable guesses at what sadf flags are avaialble in
+		# order of preference.  Otherwise give up and do not attempt to extract
+		# anything from the raw sar data.
+		while true; do
+			SADF="sadf -d -U"
+			$SADF 1 1 $RAWSARFILE > /dev/null 2>&1
+			if [ $? -eq 0 ]; then
+				break
 			fi
-		fi
+
+			SADF="sadf -D"
+			$SADF 1 1 $RAWSARFILE > /dev/null 2>&1
+			if [ $? -eq 0 ]; then
+				break
+			fi
+
+			echo "WARNING: Was not able to determine proper sadf flags"
+			SADF="true"
+		done
 	else
 		SADF=true
 	fi
@@ -70,8 +84,14 @@ if [ $STOP -eq 1 ]; then
 	$SADF -P ALL $RAWSARFILE > $SARDIR/sar-cpu.csv
 	$SADF $RAWSARFILE -- -B > $SARDIR/sar-paging.csv
 	$SADF $RAWSARFILE -- -d -p > $SARDIR/sar-blockdev.csv
-	$SADF $RAWSARFILE -- -R > $SARDIR/sar-mem1.csv
-	$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem2.csv
+	# The -R flag was removed in v11.5.4
+	$SADF 1 1 $RAWSARFILE -- -R > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		$SADF $RAWSARFILE -- -R > $SARDIR/sar-mem1.csv
+		$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem2.csv
+	else
+		$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem.csv
+	fi
 	$SADF $RAWSARFILE -- -W > $SARDIR/sar-swap.csv
 	$SADF $RAWSARFILE -- -n DEV > $SARDIR/sar-net.csv
 
@@ -87,16 +107,25 @@ fi
 
 which pidstat > /dev/null 2>&1
 if [ $? -eq 0 ]; then
-    PIDSTAT="pidstat -h -l -d -r -s -u -w"
-	$PIDSTAT 1 1 > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
-		PIDSTAT="pidstat -h -l -d -r -u -w"
+	# Make some reasonable guesses at what pidstat flags are avaialble in order
+	# of preference.  Otherwise give up and do not attempt to collect anything
+	# from pidstat.
+	while true; do
+		PIDSTAT="pidstat -H -h -l -d -r -s -u -v -w"
 		$PIDSTAT 1 1 > /dev/null 2>&1
-		if [ $? -ne 0 ]; then
-			echo "WARNING: Cannot determine propper pidstat flags"
-			PIDSTAT="true"
+		if [ $? -eq 0 ]; then
+			break
 		fi
-	fi
+
+		PIDSTAT="pidstat -H -h -l -d -r -u -v -w"
+		$PIDSTAT 1 1 > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			break
+		fi
+
+		echo "WARNING: Cannot determine proper pidstat flags"
+		PIDSTAT="true"
+	done
 else
     PIDSTAT=true
 fi

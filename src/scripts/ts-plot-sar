@@ -33,6 +33,9 @@ plot_blockdev_io() {
 		set grid
 		plot $PLOTLINES
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 }
 
 plot_blockdev_rd() {
@@ -54,6 +57,9 @@ plot_blockdev_rd() {
 		set grid
 		plot $PLOTLINES
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 }
 
 plot_blockdev_tps() {
@@ -75,6 +81,9 @@ plot_blockdev_tps() {
 		set grid
 		plot $PLOTLINES
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 }
 
 plot_blockdev_util() {
@@ -96,6 +105,9 @@ plot_blockdev_util() {
 		set grid
 		plot $PLOTLINES
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 }
 
 plot_blockdev_wd() {
@@ -117,6 +129,9 @@ plot_blockdev_wd() {
 		set grid
 		plot $PLOTLINES
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 }
 
 plot_blockdev() {
@@ -221,6 +236,9 @@ plot_cpu() {
 			title columnheader(i) \
 			with lines
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 	rm -f $DATAFILE
 
 	# Create % busy time per processor on a single chart.
@@ -254,6 +272,9 @@ plot_cpu() {
 		set grid
 		plot $GNUPLOTLINE
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 	rm -f $DATAFILES
 }
 
@@ -278,6 +299,9 @@ plot_net_kb() {
 		plot datafile using 3:7 title 'rx' with lines, \
 			datafile using 3:8 title 'tx' with lines
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 }
 
 plot_net() {
@@ -318,6 +342,9 @@ plot_swap() {
 			title columnheader(i) \
 			with lines
 	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 }
 
 SARDIR=""

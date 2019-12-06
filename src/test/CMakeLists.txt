@@ -19,3 +19,6 @@ ADD_TEST(days sh ${CMAKE_SOURCE_DIR}/src/test/tget_days.sh)
 ADD_TEST(generate_analyze sh ${CMAKE_SOURCE_DIR}/src/test/tgenerate_analyze.sh)
 ADD_TEST(generate_plan sh ${CMAKE_SOURCE_DIR}/src/test/tgenerate_plan.sh)
 ADD_TEST(generate_query sh ${CMAKE_SOURCE_DIR}/src/test/tgenerate_query.sh)
+ADD_TEST(stats_collections
+         sh ${CMAKE_SOURCE_DIR}/src/test/tstats_collection.sh)
+ADD_TEST(plotting sh ${CMAKE_SOURCE_DIR}/src/test/tplotting.sh)
