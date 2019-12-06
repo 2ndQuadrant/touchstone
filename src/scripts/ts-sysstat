@@ -14,7 +14,7 @@ usage() {
 
 SARPIDFILE=""
 PIDSTATPIDFILE=""
-RAWSARFILE=""
+DATAFILE=""
 
 OUTDIR=""
 SAMPLE_LENGTH=60
@@ -46,7 +46,7 @@ if [ -z "$OUTDIR" ]; then
 	exit 1
 fi
 
-RAWSARFILE="$OUTDIR/sar_raw.out"
+DATAFILE="$OUTDIR/sar.datafile"
 
 if [ $STOP -eq 1 ]; then
 	for PIDFILE in $SARPIDFILE $PIDSTATPIDFILE; do
@@ -61,13 +61,13 @@ if [ $STOP -eq 1 ]; then
 		# anything from the raw sar data.
 		while true; do
 			SADF="sadf -d -U"
-			$SADF 1 1 $RAWSARFILE > /dev/null 2>&1
+			$SADF 1 1 $DATAFILE > /dev/null 2>&1
 			if [ $? -eq 0 ]; then
 				break
 			fi
 
 			SADF="sadf -D"
-			$SADF 1 1 $RAWSARFILE > /dev/null 2>&1
+			$SADF 1 1 $DATAFILE > /dev/null 2>&1
 			if [ $? -eq 0 ]; then
 				break
 			fi
@@ -81,39 +81,39 @@ if [ $STOP -eq 1 ]; then
 
 	SARDIR="$OUTDIR/sar"
 	mkdir -p $SARDIR
-	$SADF -P ALL $RAWSARFILE > $SARDIR/sar-cpu.csv
-	$SADF $RAWSARFILE -- -B > $SARDIR/sar-paging.csv
-	$SADF $RAWSARFILE -- -d -p > $SARDIR/sar-blockdev.csv
+	$SADF -P ALL $DATAFILE > $SARDIR/sar-cpu.csv
+	$SADF $DATAFILE -- -B > $SARDIR/sar-paging.csv
+	$SADF $DATAFILE -- -d -p > $SARDIR/sar-blockdev.csv
 	# The -R flag was removed in v11.5.4
-	$SADF 1 1 $RAWSARFILE -- -R > /dev/null 2>&1
+	$SADF 1 1 $DATAFILE -- -R > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
-		$SADF $RAWSARFILE -- -R > $SARDIR/sar-mem1.csv
-		$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem2.csv
+		$SADF $DATAFILE -- -R > $SARDIR/sar-mem1.csv
+		$SADF $DATAFILE -- -r > $SARDIR/sar-mem2.csv
 	else
-		$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem.csv
+		$SADF $DATAFILE -- -r > $SARDIR/sar-mem.csv
 	fi
-	$SADF $RAWSARFILE -- -W > $SARDIR/sar-swap.csv
-	$SADF $RAWSARFILE -- -n DEV > $SARDIR/sar-net.csv
+	$SADF $DATAFILE -- -W > $SARDIR/sar-swap.csv
+	$SADF $DATAFILE -- -n DEV > $SARDIR/sar-net.csv
 
 	# Use sadf to generate svg charts if that options is avaialble.
 	SADF="sadf -g"
-	$SADF -P ALL $RAWSARFILE > /dev/null 2>&1
+	$SADF -P ALL $DATAFILE > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 		exit 0
 	fi
-	$SADF -P ALL $RAWSARFILE > $SARDIR/sar-cpu.svg
-	$SADF $RAWSARFILE -- -B > $SARDIR/sar-paging.svg
-	$SADF $RAWSARFILE -- -d -p > $SARDIR/sar-blockdev.svg
+	$SADF -P ALL $DATAFILE > $SARDIR/sar-cpu.svg
+	$SADF $DATAFILE -- -B > $SARDIR/sar-paging.svg
+	$SADF $DATAFILE -- -d -p > $SARDIR/sar-blockdev.svg
 	# The -R flag was removed in v11.5.4
-	$SADF 1 1 $RAWSARFILE -- -R > /dev/null 2>&1
+	$SADF 1 1 $DATAFILE -- -R > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
-		$SADF $RAWSARFILE -- -R > $SARDIR/sar-mem1.svg
-		$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem2.svg
+		$SADF $DATAFILE -- -R > $SARDIR/sar-mem1.svg
+		$SADF $DATAFILE -- -r > $SARDIR/sar-mem2.svg
 	else
-		$SADF $RAWSARFILE -- -r > $SARDIR/sar-mem.svg
+		$SADF $DATAFILE -- -r > $SARDIR/sar-mem.svg
 	fi
-	$SADF $RAWSARFILE -- -W > $SARDIR/sar-swap.svg
-	$SADF $RAWSARFILE -- -n DEV > $SARDIR/sar-net.svg
+	$SADF $DATAFILE -- -W > $SARDIR/sar-swap.svg
+	$SADF $DATAFILE -- -n DEV > $SARDIR/sar-net.svg
 
 	exit 0
 fi
@@ -150,7 +150,7 @@ else
     PIDSTAT=true
 fi
 
-$SAR -o $RAWSARFILE $SAMPLE_LENGTH > $OUTDIR/sar.txt &
+$SAR -o $DATAFILE $SAMPLE_LENGTH > $OUTDIR/sar.txt &
 echo $! > $SARPIDFILE
 
 $PIDSTAT $SAMPLE_LENGTH > $OUTDIR/pidstat.txt &
