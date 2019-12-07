@@ -34,11 +34,8 @@ plot_cpu() {
 		set xtics rotate
 		set key below
 		set grid
-		plot datafile using 1:7 title columnheader(21) with lines
+		plot datafile using 1:8 title columnheader(25) with lines
 	__EOF__
-	if [ $? -ne 0 ]; then
-		exit 1
-	fi
 }
 
 plot_io() {
@@ -61,26 +58,51 @@ plot_io() {
 		set xtics rotate
 		set key below
 		set grid
-		plot datafile using 1:16 title 'Reads:'.columnhead(21) with lines, \
-			datafile using 1:17 title 'Writes:'.columnhead(21) with lines
+		plot datafile using 1:18 title 'Reads:'.columnhead(25) with lines, \
+			datafile using 1:19 title 'Writes:'.columnhead(25) with lines
 	__EOF__
-	if [ $? -ne 0 ]; then
-		exit 1
-	fi
+}
+
+plot_mem() {
+	local PID=$1
+	local DATAFILE=$2
+
+	local PIDDIR="pidstat-mem"
+	mkdir -p $PIDDIR
+
+	gnuplot <<- __EOF__
+		datafile = "$DATAFILE"
+		set title "Physical Memory Used"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output "$PIDDIR/pidstat-mem-$PID.png"
+		set xlabel "Time"
+		set ylabel "% Utilization"
+		set yrange [0:100]
+		set xtics rotate
+		set key below
+		set grid
+		plot datafile using 1:14 title 'Reads:'.columnhead(25) with lines
+	__EOF__
 }
 
 plot() {
-	# We're getting PIDs, but since pidstat format isn't especially friendly,
-	# we need to remove UID.
-	local PIDS=`awk 'NR > 1 {print $3}' $CSVFILE | sort -n | uniq | grep -v UID`
+	# Create an index of pids and the task command.
+	awk 'NR > 1 && NF > 1 && $1 != "#" {print $3, $25}' pidstat.txt | \
+			sort -n | uniq > pidstat-index.txt
+
+	local PIDS=`awk 'NR > 1 && NF > 1 && $1 != "#" {print $3}' $CSVFILE | sort -n | uniq`
 	for PID in $PIDS; do
 		local DATAFILE=`tempfile`
 		DATAFILES="$DATAFILES $DATAFILE"
 
-		awk -v pid="$PID" '$3 == pid' $CSVFILE > $DATAFILE
+		grep "^#" pidstat.txt | head -n 1 > $DATAFILE
+		awk -v pid="$PID" '$3 == pid' $CSVFILE >> $DATAFILE
 
 		plot_cpu $PID $DATAFILE
 		plot_io $PID $DATAFILE
+		plot_mem $PID $DATAFILE
 	done
 
 	rm -f $DATAFILES
