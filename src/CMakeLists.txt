@@ -7,6 +7,11 @@ INSTALL(
     DESTINATION "include"
 )
 INSTALL(
+    FILES
+    ${CMAKE_SOURCE_DIR}/etc/ts-collectd-sy.conf
+    DESTINATION "etc/touchstone"
+)
+INSTALL(
     PROGRAMS
     ${CMAKE_BINARY_DIR}/src/libtouchstone.so
     DESTINATION "lib"

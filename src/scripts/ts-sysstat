@@ -12,6 +12,7 @@ usage() {
 	echo "  -s             Kill all stat collection processes with pids in -o <path>"
 }
 
+COLLECTDSYPIDFILE=""
 SARPIDFILE=""
 PIDSTATPIDFILE=""
 DATAFILE=""
@@ -34,6 +35,7 @@ while getopts "hi:o:s" OPT; do
 		mkdir -p $OUTDIR
 		PIDSTATPIDFILE="$OUTDIR/pidstat.pid"
 		SARPIDFILE="$OUTDIR/sar.pid"
+		COLLECTDSYPIDFILE="$OUTDIR/collectd-sy.pid"
 		;;
 	s)
 		STOP=1
@@ -49,7 +51,7 @@ fi
 DATAFILE="$OUTDIR/sar.datafile"
 
 if [ $STOP -eq 1 ]; then
-	for PIDFILE in $SARPIDFILE $PIDSTATPIDFILE; do
+	for PIDFILE in $SARPIDFILE $PIDSTATPIDFILE $COLLECTDSYPIDFILE; do
 		if [ -f $PIDFILE ]; then
 			read PID < $PIDFILE
 			kill $PID
@@ -151,6 +153,24 @@ if [ $? -eq 0 ]; then
 	done
 else
     PIDSTAT=true
+fi
+
+which collectd > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+	ETCDIR=`dirname $0`
+	ETCDIR="${ETCDIR}/../etc/touchstone"
+	COLLECTDCONFTEMPLATE="${ETCDIR}/ts-collectd-sy.conf"
+	COLLECTDCONF="${OUTDIR}/collectd-sy.conf"
+	if [ -f $COLLECTDONF ]; then
+		cp $COLLECTDCONFTEMPLATE $COLLECTDCONF
+		cat >> $COLLECTDCONF <<- EOF
+		<Plugin csv>
+		    DataDir "$OUTDIR/collectd"
+		    StoreRates false
+		</Plugin>
+		EOF
+		collectd -C $COLLECTDCONF -P $COLLECTDSYPIDFILE
+	fi
 fi
 
 $SAR -o $DATAFILE $SAMPLE_LENGTH > $OUTDIR/sar.txt &
