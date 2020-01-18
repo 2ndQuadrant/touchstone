@@ -50,8 +50,11 @@ DATAFILE="$OUTDIR/sar.datafile"
 
 if [ $STOP -eq 1 ]; then
 	for PIDFILE in $SARPIDFILE $PIDSTATPIDFILE; do
-		read PID < $PIDFILE
-		kill $PID
+		if [ -f $PIDFILE ]; then
+			read PID < $PIDFILE
+			kill $PID
+			rm $PIDFILE
+		fi
 	done
 
 	which sadf > /dev/null 2>&1
