@@ -12,45 +12,69 @@ usage() {
 	echo "  -s             Kill all stat collection processes with pids in -o <path>"
 }
 
-COLLECTDSYPIDFILE=""
-SARPIDFILE=""
-PIDSTATPIDFILE=""
-DATAFILE=""
+start_collectd() {
+	which collectd > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		ETCDIR=`dirname $0`
+		ETCDIR="${ETCDIR}/../etc/touchstone"
+		COLLECTDCONFTEMPLATE="${ETCDIR}/ts-collectd-sy.conf"
+		COLLECTDCONF="${OUTDIR}/collectd-sy.conf"
+		if [ -f $COLLECTDONF ]; then
+			cp $COLLECTDCONFTEMPLATE $COLLECTDCONF
+			cat >> $COLLECTDCONF <<- EOF
+			<Plugin csv>
+				DataDir "$OUTDIR/collectd"
+				StoreRates false
+			</Plugin>
+			EOF
+			collectd -C $COLLECTDCONF -P $COLLECTDSYPIDFILE
+		fi
+	fi
+}
 
-OUTDIR=""
-SAMPLE_LENGTH=60
-STOP=0
-while getopts "hi:o:s" OPT; do
-	case $OPT in
-	h)
-		usage
-		exit 0
-		;;
-	i)
-		# FIXME: Test for valid integer
-		SAMPLE_LENGTH=$OPTARG
-		;;
-	o)
-		OUTDIR=$OPTARG
-		mkdir -p $OUTDIR
-		PIDSTATPIDFILE="$OUTDIR/pidstat.pid"
-		SARPIDFILE="$OUTDIR/sar.pid"
-		COLLECTDSYPIDFILE="$OUTDIR/collectd-sy.pid"
-		;;
-	s)
-		STOP=1
-		;;
-	esac
-done
+start_pidstat() {
+	which pidstat > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		# Make some reasonable guesses at what pidstat flags are avaialble in order
+		# of preference.  Otherwise give up and do not attempt to collect anything
+		# from pidstat.
+		while true; do
+			PIDSTAT="pidstat -H -h -l -d -r -s -u -v -w"
+			$PIDSTAT 1 1 > /dev/null 2>&1
+			if [ $? -eq 0 ]; then
+				break
+			fi
 
-if [ -z "$OUTDIR" ]; then
-	echo "ERROR: Specify output directory with -o"
-	exit 1
-fi
+			PIDSTAT="pidstat -H -h -l -d -r -u -v -w"
+			$PIDSTAT 1 1 > /dev/null 2>&1
+			if [ $? -eq 0 ]; then
+				break
+			fi
 
-DATAFILE="$OUTDIR/sar.datafile"
+			echo "WARNING: Cannot determine proper pidstat flags"
+			PIDSTAT="true"
+		done
+	else
+		PIDSTAT=true
+	fi
 
-if [ $STOP -eq 1 ]; then
+	$PIDSTAT $SAMPLE_LENGTH > $OUTDIR/pidstat.txt &
+	echo $! > $PIDSTATPIDFILE
+}
+
+start_sar() {
+	which sar > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		SAR="sar"
+	else
+		SAR="true"
+	fi
+
+	$SAR -o $DATAFILE $SAMPLE_LENGTH > $OUTDIR/sar.txt &
+	echo $! > $SARPIDFILE
+}
+
+stop_collection() {
 	for PIDFILE in $SARPIDFILE $PIDSTATPIDFILE $COLLECTDSYPIDFILE; do
 		if [ -f $PIDFILE ]; then
 			read PID < $PIDFILE
@@ -119,64 +143,53 @@ if [ $STOP -eq 1 ]; then
 	fi
 	$SADF $DATAFILE -- -W > $SARDIR/sar-swap.svg
 	$SADF $DATAFILE -- -n DEV > $SARDIR/sar-net.svg
+}
 
+COLLECTDSYPIDFILE=""
+SARPIDFILE=""
+PIDSTATPIDFILE=""
+DATAFILE=""
+
+OUTDIR=""
+SAMPLE_LENGTH=60
+STOP=0
+while getopts "hi:o:s" OPT; do
+	case $OPT in
+	h)
+		usage
+		exit 0
+		;;
+	i)
+		# FIXME: Test for valid integer
+		SAMPLE_LENGTH=$OPTARG
+		;;
+	o)
+		OUTDIR=$OPTARG
+		mkdir -p $OUTDIR
+		PIDSTATPIDFILE="$OUTDIR/pidstat.pid"
+		SARPIDFILE="$OUTDIR/sar.pid"
+		COLLECTDSYPIDFILE="$OUTDIR/collectd-sy.pid"
+		;;
+	s)
+		STOP=1
+		;;
+	esac
+done
+
+if [ -z "$OUTDIR" ]; then
+	echo "ERROR: Specify output directory with -o"
+	exit 1
+fi
+
+DATAFILE="$OUTDIR/sar.datafile"
+
+if [ $STOP -eq 1 ]; then
+	stop_collection
 	exit 0
 fi
 
-which sar > /dev/null 2>&1
-if [ $? -eq 0 ]; then
-	SAR="sar"
-else
-	SAR="true"
-fi
-
-which pidstat > /dev/null 2>&1
-if [ $? -eq 0 ]; then
-	# Make some reasonable guesses at what pidstat flags are avaialble in order
-	# of preference.  Otherwise give up and do not attempt to collect anything
-	# from pidstat.
-	while true; do
-		PIDSTAT="pidstat -H -h -l -d -r -s -u -v -w"
-		$PIDSTAT 1 1 > /dev/null 2>&1
-		if [ $? -eq 0 ]; then
-			break
-		fi
-
-		PIDSTAT="pidstat -H -h -l -d -r -u -v -w"
-		$PIDSTAT 1 1 > /dev/null 2>&1
-		if [ $? -eq 0 ]; then
-			break
-		fi
-
-		echo "WARNING: Cannot determine proper pidstat flags"
-		PIDSTAT="true"
-	done
-else
-    PIDSTAT=true
-fi
-
-which collectd > /dev/null 2>&1
-if [ $? -eq 0 ]; then
-	ETCDIR=`dirname $0`
-	ETCDIR="${ETCDIR}/../etc/touchstone"
-	COLLECTDCONFTEMPLATE="${ETCDIR}/ts-collectd-sy.conf"
-	COLLECTDCONF="${OUTDIR}/collectd-sy.conf"
-	if [ -f $COLLECTDONF ]; then
-		cp $COLLECTDCONFTEMPLATE $COLLECTDCONF
-		cat >> $COLLECTDCONF <<- EOF
-		<Plugin csv>
-		    DataDir "$OUTDIR/collectd"
-		    StoreRates false
-		</Plugin>
-		EOF
-		collectd -C $COLLECTDCONF -P $COLLECTDSYPIDFILE
-	fi
-fi
-
-$SAR -o $DATAFILE $SAMPLE_LENGTH > $OUTDIR/sar.txt &
-echo $! > $SARPIDFILE
-
-$PIDSTAT $SAMPLE_LENGTH > $OUTDIR/pidstat.txt &
-echo $! > $PIDSTATPIDFILE
+start_sar &
+start_pidstat &
+start_collectd &
 
 exit 0
