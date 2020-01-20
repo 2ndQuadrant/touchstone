@@ -8,13 +8,15 @@ usage() {
 	echo
 	echo "Options:"
 	echo "  -i <interval>  Interval (seconds) between samples, default 60"
-	echo "  -o <path>      Path to save results"
-	echo "  -s             Kill all stat collection processes with pids in -o <path>"
+	echo "  -o <path>      Path to save data"
+	echo "  -s             Stop stat collection processes saving to -o <path>"
 }
 
 start_collectd() {
 	which collectd > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
+		# Make custom copies of the collectd config in order to control where
+		# the data is saved.
 		ETCDIR=`dirname $0`
 		ETCDIR="${ETCDIR}/../etc/touchstone"
 		COLLECTDCONFTEMPLATE="${ETCDIR}/ts-collectd-sy.conf"
@@ -29,15 +31,18 @@ start_collectd() {
 			EOF
 			collectd -C $COLLECTDCONF -P $COLLECTDSYPIDFILE
 		fi
+	else
+		echo "WARNING: collectd not started"
+		echo "collectd not in PATH: $PATH" >> $OUTDIR/collectd.log
 	fi
 }
 
 start_pidstat() {
 	which pidstat > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
-		# Make some reasonable guesses at what pidstat flags are avaialble in order
-		# of preference.  Otherwise give up and do not attempt to collect anything
-		# from pidstat.
+		# Make some reasonable guesses at what pidstat flags are available in
+		# order of preference.  Otherwise give up and do not attempt to collect
+		# anything from pidstat.
 		while true; do
 			PIDSTAT="pidstat -H -h -l -d -r -s -u -v -w"
 			$PIDSTAT 1 1 > /dev/null 2>&1
@@ -51,10 +56,14 @@ start_pidstat() {
 				break
 			fi
 
-			echo "WARNING: Cannot determine proper pidstat flags"
+			echo "WARNING: Did not use pidstat correctly"
+			echo "WARNING: Cannot determine proper pidstat flags" >> \
+					$OUTDIR/pidstat.log
 			PIDSTAT="true"
 		done
 	else
+		echo "WARNING: pidstat not started"
+		echo "pidstat not in PATH: $PATH" >> $OUTDIR/pidstat.log
 		PIDSTAT=true
 	fi
 
@@ -67,6 +76,7 @@ start_sar() {
 	if [ $? -eq 0 ]; then
 		SAR="sar"
 	else
+		echo "sar not in PATH: $PATH" >> $OUTDIR/sar.log
 		SAR="true"
 	fi
 
@@ -79,13 +89,13 @@ stop_collection() {
 		if [ -f $PIDFILE ]; then
 			read PID < $PIDFILE
 			kill $PID
-			rm $PIDFILE
+			rm -f $PIDFILE
 		fi
 	done
 
 	which sadf > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
-		# Make some reasonable guesses at what sadf flags are avaialble in
+		# Make some reasonable guesses at what sadf flags are available in
 		# order of preference.  Otherwise give up and do not attempt to extract
 		# anything from the raw sar data.
 		while true; do
@@ -101,10 +111,14 @@ stop_collection() {
 				break
 			fi
 
-			echo "WARNING: Was not able to determine proper sadf flags"
+			echo "WARNING: Did not use sadf correctly"
+			echo "WARNING: Was not able to determine proper sadf flags" >> \
+					$OUTDIR/sadf.log
 			SADF="true"
 		done
 	else
+		echo "WARNING: sadf not used to translate sar datafile"
+		echo "sadf not in PATH: $PATH" >> $OUTDIR/sadf.log
 		SADF=true
 	fi
 
@@ -113,7 +127,7 @@ stop_collection() {
 	$SADF -P ALL $DATAFILE > $SARDIR/sar-cpu.csv
 	$SADF $DATAFILE -- -B > $SARDIR/sar-paging.csv
 	$SADF $DATAFILE -- -d -p > $SARDIR/sar-blockdev.csv
-	# The -R flag was removed in v11.5.4
+	# The -R flag was removed in sysstat v11.5.4
 	$SADF 1 1 $DATAFILE -- -R > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		$SADF $DATAFILE -- -R > $SARDIR/sar-mem1.csv
@@ -124,7 +138,7 @@ stop_collection() {
 	$SADF $DATAFILE -- -W > $SARDIR/sar-swap.csv
 	$SADF $DATAFILE -- -n DEV > $SARDIR/sar-net.csv
 
-	# Use sadf to generate svg charts if that options is avaialble.
+	# Use sadf to generate svg charts if that options is available.
 	SADF="sadf -g"
 	$SADF -P ALL $DATAFILE > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
@@ -177,7 +191,7 @@ while getopts "hi:o:s" OPT; do
 done
 
 if [ -z "$OUTDIR" ]; then
-	echo "ERROR: Specify output directory with -o"
+	echo "ERROR: Specify directory to save data with -o"
 	exit 1
 fi
 
