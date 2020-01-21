@@ -12,6 +12,48 @@ usage() {
 	echo "  -s             Stop stat collection processes saving to -o <path>"
 }
 
+massage_pidstat() {
+	local PIDSTATFILE="$OUTDIR/pidstat.txt"
+	# Generate an index of pids and their command line information as a simple
+	# text file.
+	awk 'NR > 1 && NF > 1 && $1 != "#" {print $3, $25}' $PIDSTATFILE | \
+			sort -n | uniq > $OUTDIR/pidstat-index.txt
+
+	local PIDSTATCLEAN="$OUTDIR/pidstat-clean.txt"
+
+	# Start the new CSV-like file with header information.
+	head -n 3 $PIDSTATFILE | tail -n 1 > $PIDSTATCLEAN
+
+	# Build an intermediate file with the redundant headers and empty lines
+	# removed.  Use the original file's line number as a filler to the first column
+	# that the hash (#) character/comment is going to indirectly produce as a side
+	# effect of the data massaging.
+	awk 'NR > 1 && NF > 1 && $1 != "#" {print NR, $0}' $PIDSTATFILE >> \
+			$PIDSTATCLEAN
+
+	# Determine the number of fields that are present in the pidstat output.
+	local HEADER=`head -n 3 $PIDSTATFILE | tail -n 1`
+	local CSVHEADER=`echo "$HEADER" | tr -s ' ' ';'`
+	local COUNT=`echo $CSVHEADER | tr -cd ";" | wc -c`
+
+	# Reconstruct the pidstat data with a CSV-like format.
+	local PIDSTATCSV="$OUTDIR/pidstat.csv"
+	echo -n > $PIDSTATCSV
+	while read line; do
+		# Preserve the entire command line information, if not the whitespace
+		# between words.
+		local COMMAND=$line
+		for i in `seq 1 $COUNT`; do
+			COMMAND=`echo $COMMAND | awk '{$1=""; print $0}'`
+		done
+		COMMAND=`echo $COMMAND | awk '$1=$1'`
+
+		# Regurgitate the pidstat data as semicolon (;) delimited values.
+		echo "`echo $line | tr -s ' ' ';' | cut -d ';' -f -$COUNT`;$COMMAND" \
+				>> $PIDSTATCSV
+	done < "$PIDSTATCLEAN"
+}
+
 start_collectd() {
 	which collectd > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
@@ -199,6 +241,7 @@ DATAFILE="$OUTDIR/sar.datafile"
 
 if [ $STOP -eq 1 ]; then
 	stop_collection
+	massage_pidstat
 	exit 0
 fi
 
