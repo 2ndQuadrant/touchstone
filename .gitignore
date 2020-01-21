@@ -20,6 +20,8 @@ Testing
 
 config.h
 
+man/man1/ts-sysstat.1
+
 src/bin/*
 !src/bin/CMakeLists.txt
 

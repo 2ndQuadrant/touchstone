@@ -22,6 +22,7 @@ ELSE()
 ENDIF(ENABLE_CASSERT EQUAL 1)
 
 ADD_SUBDIRECTORY(src)
+ADD_SUBDIRECTORY(man)
 
 # CPack rules for creating distribution files.
 
