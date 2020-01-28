@@ -76,12 +76,12 @@ process_sar() {
 			echo "WARNING: Did not use sadf correctly"
 			echo "WARNING: Was not able to determine proper sadf flags" >> \
 					$OUTDIR/sadf.log
-			SADF="true"
+			return
 		done
 	else
 		echo "WARNING: sadf not used to translate sar datafile"
 		echo "sadf not in PATH: $PATH" >> $OUTDIR/sadf.log
-		SADF=true
+		return
 	fi
 
 	SARDIR="$OUTDIR/sar"
@@ -104,7 +104,7 @@ process_sar() {
 	SADF="sadf -g"
 	$SADF -P ALL $DATAFILE > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
-		exit 0
+		return
 	fi
 	$SADF -P ALL $DATAFILE > $SARDIR/sar-cpu.svg
 	$SADF $DATAFILE -- -B > $SARDIR/sar-paging.svg
@@ -168,12 +168,12 @@ start_pidstat() {
 			echo "WARNING: Did not use pidstat correctly"
 			echo "WARNING: Cannot determine proper pidstat flags" >> \
 					$OUTDIR/pidstat.log
-			PIDSTAT="true"
+			return
 		done
 	else
 		echo "WARNING: pidstat not started"
 		echo "pidstat not in PATH: $PATH" >> $OUTDIR/pidstat.log
-		PIDSTAT=true
+		return
 	fi
 
 	$PIDSTAT $SAMPLE_LENGTH > $OUTDIR/pidstat.txt &
@@ -186,7 +186,7 @@ start_sar() {
 		SAR="sar"
 	else
 		echo "sar not in PATH: $PATH" >> $OUTDIR/sar.log
-		SAR="true"
+		return
 	fi
 
 	$SAR -o $DATAFILE $SAMPLE_LENGTH > $OUTDIR/sar.txt &
