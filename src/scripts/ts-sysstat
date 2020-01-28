@@ -165,6 +165,13 @@ start_pidstat() {
 				break
 			fi
 
+			# sysstat v10.1.5
+			PIDSTAT="pidstat -h -l -d -r -u -w"
+			$PIDSTAT 1 1 > /dev/null 2>&1
+			if [ $? -eq 0 ]; then
+				break
+			fi
+
 			echo "WARNING: Did not use pidstat correctly"
 			echo "WARNING: Cannot determine proper pidstat flags" >> \
 					$OUTDIR/pidstat.log
