@@ -15,7 +15,7 @@ void get_alpha(char *str, int min, int max)
 	int length;
 	int i;
 
-	length = getrand(min, max);
+	length = getrand(min, max) + 1;
 	str[length - 1] = '\0';
 	for (i = 0; i < length - 1; i++)
 		str[i] = alpha[(int) getrand(0, ALPHA_LEN - 1)];
