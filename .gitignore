@@ -21,6 +21,7 @@ Testing
 config.h
 
 man/man1/ts-sysstat.1
+man/man3/genrand64_int64.3
 
 src/bin/*
 !src/bin/CMakeLists.txt
