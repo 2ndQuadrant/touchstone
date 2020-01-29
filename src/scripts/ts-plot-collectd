@@ -1,0 +1,221 @@
+#!/bin/sh
+#
+# Copyright 2018,2019 PostgreSQL Global Development Group
+#
+
+SIZE="800,500"
+
+usage() {
+	echo "Usage: `basename $0` <options>"
+	echo
+	echo "Options:"
+	echo "  -i <path>  Path to collectd directory"
+	echo "  -s <x,y>   Size of charts, default 800,500"
+}
+
+# Combine all like files since collectd generates a file per day
+merge_collectd_data() {
+	FILEPATTERN=$1
+	DATAFILE=$2
+
+	COUNT=1
+	for file in `ls -vf ${FILEPATTERN}*`; do
+		if [ $COUNT -gt 1 ]; then
+			cat $file >> $DATAFILE
+		else
+			tail -n +2 $file > $DATAFILE
+		fi
+		COUNT=$(( $COUNT + 1 ))
+	done
+}
+
+plot_cpu() {
+	if [ ! -d "aggregation-cpu-average" ]; then
+		echo "WARNING: aggregation-cpu-average does not exist"
+		return
+	fi
+
+	cd aggregation-cpu-average
+
+	local DATAIDLE=`tempfile`
+	local DATAINTERRUPT=`tempfile`
+	local DATANICE=`tempfile`
+	local DATASYSTEM=`tempfile`
+	local DATAUSER=`tempfile`
+
+	merge_collectd_data "percent-idle-" $DATAIDLE
+	merge_collectd_data "percent-interrupt-" $DATAINTERRUPT
+	merge_collectd_data "percent-nice-" $DATANICE
+	merge_collectd_data "percent-system-" $DATASYSTEM
+	merge_collectd_data "percent-user-" $DATAUSER
+
+	gnuplot <<- __EOF__
+		set datafile separator ","
+		set title "Processor Utilization"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output 'collectd-cpu.png'
+		set xlabel "Time"
+		set ylabel "% Utilization"
+		set yrange [0:100]
+		set xtics rotate
+		set xtics format "%R"
+		set key below
+		set grid
+		plot "$DATAIDLE" using 1:2 title "idle" with lines, \
+			"$DATAINTERRUPT" using 1:2 title "interrupt" with lines, \
+			"$DATANICE" using 1:2 title "nice" with lines, \
+			"$DATASYSTEM" using 1:2 title "system" with lines, \
+			"$DATAUSER" using 1:2 title "user" with lines
+	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
+
+	rm -f $DATAIDLE $DATAINTERRUPT $DATANICE $DATASYSTEM $DATAUSER
+}
+
+plot_memory() {
+	if [ ! -d "memory" ]; then
+		echo "WARNING: memory does not exist"
+		return
+	fi
+
+	cd memory
+
+	local DATAACTIVE=`tempfile`
+	local DATACACHE=`tempfile`
+	local DATAFREE=`tempfile`
+	local DATAINACTIVE=`tempfile`
+	local DATAWIRED=`tempfile`
+
+	merge_collectd_data "memory-active-" $DATAACTIVE
+	merge_collectd_data "memory-cache-" $DATACACHE
+	merge_collectd_data "memory-free-" $DATAFREE
+	merge_collectd_data "memory-inactive-" $DATAINACTIVE
+	merge_collectd_data "memory-wired-" $DATAWIRED
+
+	gnuplot <<- __EOF__
+		set datafile separator ","
+		set title "Memory"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output 'collectd-memory.png'
+		set xlabel "Time"
+		set ylabel "Bytes"
+		set yrange [0:*]
+		set xtics rotate
+		set xtics format "%R"
+		set key below
+		set grid
+		plot "$DATAACTIVE" using 1:2 title "active" with lines, \
+			"$DATACACHE" using 1:2 title "cache" with lines, \
+			"$DATAFREE" using 1:2 title "free" with lines, \
+			"$DATAINACTIVE" using 1:2 title "inactive" with lines, \
+			"$DATAWIRED" using 1:2 title "wired" with lines
+	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
+
+	rm -f $DATAACTIVE
+}
+
+plot_processes() {
+	if [ ! -d "processes" ]; then
+		echo "WARNING: processes"
+		return
+	fi
+
+	cd processes
+
+	local DATABLOCKED=`tempfile`
+	local DATAIDLE=`tempfile`
+	local DATARUNNING=`tempfile`
+	local DATASLEEPING=`tempfile`
+	local DATASTOPPED=`tempfile`
+	local DATAWAIT=`tempfile`
+	local DATAZOMBIES=`tempfile`
+
+	merge_collectd_data "ps_state-blocked-" $DATABLOCKED
+	merge_collectd_data "ps_state-idle-" $DATAIDLE
+	merge_collectd_data "ps_state-running-" $DATARUNNING
+	merge_collectd_data "ps_state-sleeping-" $DATASLEEPING
+	merge_collectd_data "ps_state-stopped-" $DATASTOPPED
+	merge_collectd_data "ps_state-wait-" $DATAWAIT
+	merge_collectd_data "ps_state-zombies-" $DATAZOMBIES
+
+	gnuplot <<- __EOF__
+		set datafile separator ","
+		set title "Processes"
+		set xdata time
+		set timefmt "%s"
+		set terminal pngcairo size $SIZE
+		set output 'collectd-processes.png'
+		set xlabel "Time"
+		set ylabel "Processes"
+		set yrange [0:*]
+		set xtics rotate
+		set xtics format "%R"
+		set key below
+		set grid
+		plot "$DATABLOCKED" using 1:2 title "blocked" with lines, \
+			"$DATAIDLE" using 1:2 title "idle" with lines, \
+			"$DATARUNNING" using 1:2 title "running" with lines, \
+			"$DATASLEEPING" using 1:2 title "sleeping" with lines, \
+			"$DATASTOPPED" using 1:2 title "stopped" with lines, \
+			"$DATAWAIT" using 1:2 title "wait" with lines, \
+			"$DATAZOMBIES" using 1:2 title "zombies" with lines
+	__EOF__
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
+
+	rm -f $DATABLOCKED $DATAINTERRUPT $DATARUNNING $DATASLEEPING $DATASTOPPED \
+			$DATAWAIT $DATAZOMBIES
+}
+
+COLLECTDDIR=""
+while getopts "hi:s:" OPT; do
+	case $OPT in
+	h)
+		usage
+		exit 0
+		;;
+	i)
+		COLLECTDDIR=$OPTARG
+		;;
+	s)
+		SIZE=$OPTARG
+		;;
+	esac
+done
+
+if [ -z "$COLLECTDDIR" ]; then
+	echo "ERROR: Specify collectd directory with -i"
+	exit 1
+fi
+
+which gnuplot > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+	echo "WARNING: gnuplot not in path, collectd charts not created"
+	exit 0
+fi
+
+if [ ! -d "$COLLECTDDIR" ]; then
+	echo "ERROR: $COLLECTDDIR does not exist"
+	exit 1
+fi
+
+cd $COLLECTDDIR
+
+for dir in `ls -d *`; do
+	echo "plotting data for host $dir"
+	(cd $dir && plot_cpu)
+	(cd $dir && plot_memory)
+	(cd $dir && plot_processes)
+done
+
+exit 0
