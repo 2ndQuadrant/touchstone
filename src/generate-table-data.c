@@ -133,6 +133,7 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 	long long last_row;
 	long long ll;
 	struct tm tm;
+	long long row, col;
 
 	if (chunks > 1) {
 		chunk_size = table->rows / (long long) chunks;
@@ -148,12 +149,12 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 	else
 		last_row = table->rows;
 
-	for (long long row = 0; row < last_row; row++) {
+	for (row = 0; row < last_row; row++) {
 		if (row < chunk_start)
 			which = blackhole;
 		else
 			which = stream;
-		for (long long col = 0; col < table->columns; col++) {
+		for (col = 0; col < table->columns; col++) {
 			switch (table->column[col].type) {
 			case TYPE_DATE:
 				get_date(&tm,
