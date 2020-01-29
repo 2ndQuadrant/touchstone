@@ -32,6 +32,7 @@ plot_cpu() {
 		set ylabel "% Utilization"
 		set yrange [0:100]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot datafile using 1:8 title columnheader(25) with lines
@@ -56,6 +57,7 @@ plot_io() {
 		set ylabel "kB/s"
 		set yrange [0:*]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot datafile using 1:18 title 'Reads:'.columnhead(25) with lines, \
@@ -81,6 +83,7 @@ plot_mem() {
 		set ylabel "% Utilization"
 		set yrange [0:100]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot datafile using 1:14 title 'Reads:'.columnhead(25) with lines

@@ -10,7 +10,7 @@ usage() {
 	echo
 	echo "Options:"
 	echo "  -i <path>  Path to sar data"
-	echo "  -s <x,y>   Size of charts, default 800x500"
+	echo "  -s <x,y>   Size of charts, default 800,500"
 }
 
 plot_blockdev_io() {
@@ -29,6 +29,7 @@ plot_blockdev_io() {
 		set ylabel "sec/s"
 		set yrange [0:*]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot $PLOTLINES
@@ -53,6 +54,7 @@ plot_blockdev_rd() {
 		set ylabel "sec/s"
 		set yrange [0:*]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot $PLOTLINES
@@ -77,6 +79,7 @@ plot_blockdev_tps() {
 		set ylabel "tps"
 		set yrange [0:*]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot $PLOTLINES
@@ -101,6 +104,7 @@ plot_blockdev_util() {
 		set ylabel "% Utilization"
 		set yrange [0:100]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot $PLOTLINES
@@ -125,6 +129,7 @@ plot_blockdev_wd() {
 		set ylabel "sec/s"
 		set yrange [0:*]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot $PLOTLINES
@@ -229,6 +234,7 @@ plot_cpu() {
 		set ylabel "% Utilization"
 		set yrange [0:100]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot for [i=5:8:1] \
@@ -268,6 +274,7 @@ plot_cpu() {
 		set ylabel "% Utilization"
 		set yrange [0:100]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot $GNUPLOTLINE
@@ -294,6 +301,7 @@ plot_net_kb() {
 		set ylabel "kB/s"
 		set yrange [0:*]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot datafile using 3:7 title 'rx' with lines, \
@@ -335,6 +343,7 @@ plot_swap() {
 		set ylabel "pages / s"
 		set yrange [0:*]
 		set xtics rotate
+		set xtics format "%R"
 		set key below
 		set grid
 		plot for [i=4:5:1] \
