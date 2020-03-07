@@ -4,7 +4,7 @@
 #
 
 usage() {
-	echo "Usage: `basename $0` <options>"
+	echo "Usage: `basename $0` <options> [COMMAND [ARGS]]"
 	echo
 	echo "Options:"
 	echo "  -i <interval>  Interval (seconds) between samples, default 60"
@@ -246,6 +246,8 @@ if [ -z "$OUTDIR" ]; then
 	exit 1
 fi
 
+shift $(($OPTIND - 1))
+
 DATAFILE="$OUTDIR/sar.datafile"
 
 if [ $STOP -eq 1 ]; then
@@ -258,5 +260,12 @@ fi
 start_sar &
 start_pidstat &
 start_collectd &
+
+if [ ! "x$*" = "x" ]; then
+	$*
+	stop_collection
+	massage_pidstat
+	process_sar
+fi
 
 exit 0
