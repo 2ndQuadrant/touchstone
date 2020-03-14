@@ -146,6 +146,19 @@ start_collectd() {
 	fi
 }
 
+start_iostat() {
+	which iostat > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		IOSTAT="iostat"
+	else
+		echo "iostat not in PATH: $PATH" >> $OUTDIR/iostat.log
+		return
+	fi
+
+	$IOSTAT -dxh $SAMPLE_LENGTH > $OUTDIR/iostat.txt &
+	echo $! > $IOSTATPIDFILE
+}
+
 start_pidstat() {
 	which pidstat > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
@@ -201,7 +214,7 @@ start_sar() {
 }
 
 stop_collection() {
-	for PIDFILE in $SARPIDFILE $PIDSTATPIDFILE $COLLECTDSYPIDFILE; do
+	for PIDFILE in $IOSTATPIDFILE $SARPIDFILE $PIDSTATPIDFILE $COLLECTDSYPIDFILE; do
 		if [ -f $PIDFILE ]; then
 			read PID < $PIDFILE
 			kill $PID
@@ -211,6 +224,7 @@ stop_collection() {
 }
 
 COLLECTDSYPIDFILE=""
+IOSTATPIDFILE=""
 SARPIDFILE=""
 PIDSTATPIDFILE=""
 DATAFILE=""
@@ -231,6 +245,7 @@ while getopts "hi:o:s" OPT; do
 	o)
 		OUTDIR=$OPTARG
 		mkdir -p $OUTDIR
+		IOSTATPIDFILE="$OUTDIR/iostat.pid"
 		PIDSTATPIDFILE="$OUTDIR/pidstat.pid"
 		SARPIDFILE="$OUTDIR/sar.pid"
 		COLLECTDSYPIDFILE="$OUTDIR/collectd-sy.pid"
@@ -258,6 +273,7 @@ if [ $STOP -eq 1 ]; then
 fi
 
 start_sar &
+start_iostat &
 start_pidstat &
 start_collectd &
 
