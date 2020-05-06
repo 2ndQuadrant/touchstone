@@ -2,20 +2,20 @@ default:
 	@echo "targets: clean, debug, package, release, test"
 
 clean:
-	-rm -rf _builds
+	-rm -rf build
 
 debug:
-	cmake -H. -B_builds/debug -DCMAKE_BUILD_TYPE=Debug -DENABLE_CASSERT=1
-	cd _builds/debug && make
+	cmake -H. -Bbuild/debug -DCMAKE_BUILD_TYPE=Debug -DENABLE_CASSERT=1
+	cd build/debug && make
 
 package:
-	git checkout-index --prefix=_builds/source/ -a
-	cmake -H_builds/source -B_builds/source
-	cd _builds/source && make package_source
+	git checkout-index --prefix=build/source/ -a
+	cmake -Hbuild/source -Bbuild/source
+	cd build/source && make package_source
 
 release:
-	cmake -H. -B_builds/release
-	cd _builds/release && make
+	cmake -H. -Bbuild/release
+	cd build/release && make
 
 test: debug
-	cd _builds/debug && make test
+	cd build/debug && make test
