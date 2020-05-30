@@ -23,7 +23,7 @@ plot_cpu() {
 
 	gnuplot <<- __EOF__
 		datafile = "$DATAFILE"
-		set title "Processor Utilization"
+		set title "Processor Utilization (pid $PID)"
 		set xdata time
 		set timefmt "%s"
 		set terminal pngcairo size $SIZE
@@ -48,7 +48,7 @@ plot_io() {
 
 	gnuplot <<- __EOF__
 		datafile = "$DATAFILE"
-		set title "Disk I/O"
+		set title "Disk I/O (pid $PID)"
 		set xdata time
 		set timefmt "%s"
 		set terminal pngcairo size $SIZE
@@ -74,7 +74,7 @@ plot_mem() {
 
 	gnuplot <<- __EOF__
 		datafile = "$DATAFILE"
-		set title "Physical Memory Used"
+		set title "Physical Memory Used (pid $PID)"
 		set xdata time
 		set timefmt "%s"
 		set terminal pngcairo size $SIZE
