@@ -120,8 +120,8 @@ void usage(char *filename)
 	printf("    -s <int> - set seed, default: random\n");
 }
 
-int generate_data(FILE *stream, struct table_definition_t *table,
-		char delimiter, int chunks, int chunk)
+int generate_data(pcg64f_random_t *rng, FILE *stream,
+		struct table_definition_t *table, char delimiter, int chunks, int chunk)
 {
 	char str[MAX_BUFFER_LEN];
 	int end = table->columns - 1;
@@ -157,7 +157,7 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 		for (col = 0; col < table->columns; col++) {
 			switch (table->column[col].type) {
 			case TYPE_DATE:
-				get_date(&tm,
+				get_date(rng, &tm,
 						((struct date_t *)
 								&table->column[col].arguments)->tloc1,
 						((struct date_t *)
@@ -165,7 +165,7 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 				fprintf(which, "%d-%d-%d", tm.tm_year, tm.tm_mon, tm.tm_mday);
 				break;
 			case TYPE_EXPONENTIAL:
-				ll = getExponentialRand(((struct exponential_t *)
+				ll = getExponentialRand(rng, ((struct exponential_t *)
 								&table->column[col].arguments)->arg1,
 						((struct exponential_t *)
 								&table->column[col].arguments)->arg2,
@@ -174,7 +174,7 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 				fprintf(which, "%lld", ll);
 				break;
 			case TYPE_GAUSSIAN:
-				ll = getGaussianRand(((struct gaussian_t *)
+				ll = getGaussianRand(rng, ((struct gaussian_t *)
 								&table->column[col].arguments)->arg1,
 						((struct gaussian_t *)
 								&table->column[col].arguments)->arg2,
@@ -183,7 +183,7 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 				fprintf(which, "%lld", ll);
 				break;
 			case TYPE_INTEGER:
-				ll = getrand(((struct integer_t *)
+				ll = getrand(rng, ((struct integer_t *)
 								&table->column[col].arguments)->arg1,
 						((struct integer_t *)
 								&table->column[col].arguments)->arg2);
@@ -192,12 +192,12 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 			case TYPE_LIST:
 				fprintf(which, "%s", ((struct list_t *)
 						&table->column[col].arguments)->line[
-								getrand(0, ((struct list_t *)
+								getrand(rng, 0, ((struct list_t *)
 										&table->column[col].arguments)->size -
 												1)]);
 				break;
 			case TYPE_POISSON:
-				ll = getPoissonRand(((struct poisson_t *)
+				ll = getPoissonRand(rng, ((struct poisson_t *)
 								&table->column[col].arguments)->arg1);
 				fprintf(which, "%lld", ll);
 				break;
@@ -208,7 +208,7 @@ int generate_data(FILE *stream, struct table_definition_t *table,
 				fprintf(which, "%s", str);
 				break;
 			case TYPE_TEXT:
-				get_alpha(str,
+				get_alpha(rng, str,
 						((struct text_t *)
 								&table->column[col].arguments)->arg1,
 						((struct text_t *)
@@ -502,6 +502,7 @@ int main(int argc, char *argv[])
 {
 	int c;
 	unsigned long long seed = -1;
+	pcg64f_random_t rng;
 	struct table_definition_t table;
 	char datafile[FILENAME_MAX] = "";
 
@@ -572,10 +573,7 @@ int main(int argc, char *argv[])
     putenv("TZ=\":GMT\"");
 
 	if (seed == -1) {
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		seed = getpid();
-		seed ^= tv.tv_sec ^ tv.tv_usec;
+		entropy_getbytes((void*) seed, sizeof(seed));
 	}
 
 	if (outdir[0] != '\0') {
@@ -626,8 +624,8 @@ int main(int argc, char *argv[])
 	if (c != 0)
 		return 4;
 
-	init_genrand64(seed);
-	c = generate_data(stream, &table, delimiter, chunks, chunk);
+	pcg64f_srandom_r(&rng, seed);
+	c = generate_data(&rng, stream, &table, delimiter, chunks, chunk);
 	if (c != 0)
 		return 5;
 	if (outdir[0] != '\0') {

@@ -7,6 +7,9 @@
 
 #include <time.h>
 
+#include "pcg_variants.h"
+#include "entropy.h"
+
 #define ALPHA_LEN 52
 #define BUFFER_LEN 64
 
@@ -30,14 +33,14 @@ struct query_t {
 };
 
 int generate_query(char *, char *, struct query_t *);
-void get_alpha(char *, int, int);
-void get_date(struct tm *, time_t, time_t);
+double genrand64_real2(pcg64f_random_t *);
+void get_alpha(pcg64f_random_t *, char *, int, int);
+void get_date(pcg64f_random_t *, struct tm *, time_t, time_t);
 int get_days(int);
-int64 getExponentialRand(int64, int64, double);
-int64 getGaussianRand(int64, int64, double);
-int64 getPoissonRand(int64);
-int64 getrand(int64, int64);
-void init_genrand64(unsigned long long);
+int64 getExponentialRand(pcg64f_random_t *, int64, int64, double);
+int64 getGaussianRand(pcg64f_random_t *, int64, int64, double);
+int64 getPoissonRand(pcg64f_random_t *, int64);
+int64 getrand(pcg64f_random_t *, int64, int64);
 int load_query_parameters(char *, struct query_t *);
 
 #endif /* _TOUCHSTONE_H_ */

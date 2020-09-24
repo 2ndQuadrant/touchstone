@@ -10,42 +10,6 @@
 
 const char *alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-void get_alpha(char *str, int min, int max)
-{
-	int length;
-	int i;
-
-	length = getrand(min, max) + 1;
-	str[length - 1] = '\0';
-	for (i = 0; i < length - 1; i++)
-		str[i] = alpha[(int) getrand(0, ALPHA_LEN - 1)];
-}
-
-void get_date(struct tm *tm, time_t tloc1, time_t diff)
-{
-	time_t tloc = tloc1 + getrand(0, diff);
-	localtime_r(&tloc, tm);
-}
-
-int get_days(int year)
-{
-	time_t tloc1, tloc2;
-	struct tm tm;
-
-	bzero(&tm, sizeof(struct tm));
-
-	/* Calculate the number of days to generate rows for. */
-
-	tm.tm_year = 1900 - year;
-	tm.tm_mday = 1;
-	tloc1 = mktime(&tm);
-
-	tm.tm_year += 1;
-	tloc2 = mktime(&tm);
-
-	return (int) (difftime(tloc2, tloc1) / 86400.0);
-}
-
 int generate_query(char *in, char *out, struct query_t *q)
 {
 	FILE *fin, *fout;
@@ -135,6 +99,48 @@ int generate_query(char *in, char *out, struct query_t *q)
 	fclose(fin);
 
 	return 0;
+}
+
+/* generates a random number on [0,1)-real-interval */
+double genrand64_real2(pcg64f_random_t *rng)
+{
+	return (pcg64f_random_r(rng) >> 11) * (1.0 / 9007199254740992.0);
+}
+
+void get_alpha(pcg64f_random_t *rng, char *str, int min, int max)
+{
+	int length;
+	int i;
+
+	length = getrand(rng, min, max) + 1;
+	str[length - 1] = '\0';
+	for (i = 0; i < length - 1; i++)
+		str[i] = alpha[(int) getrand(rng, 0, ALPHA_LEN - 1)];
+}
+
+void get_date(pcg64f_random_t *rng, struct tm *tm, time_t tloc1, time_t diff)
+{
+	time_t tloc = tloc1 + getrand(rng, 0, diff);
+	localtime_r(&tloc, tm);
+}
+
+int get_days(int year)
+{
+	time_t tloc1, tloc2;
+	struct tm tm;
+
+	bzero(&tm, sizeof(struct tm));
+
+	/* Calculate the number of days to generate rows for. */
+
+	tm.tm_year = 1900 - year;
+	tm.tm_mday = 1;
+	tloc1 = mktime(&tm);
+
+	tm.tm_year += 1;
+	tloc2 = mktime(&tm);
+
+	return (int) (difftime(tloc2, tloc1) / 86400.0);
 }
 
 /*

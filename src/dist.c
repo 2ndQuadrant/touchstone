@@ -8,17 +8,16 @@
 #include <math.h>
 
 #include "touchstone.h"
-#include "mt19937-64.h"
 
 /* random number generator: uniform distribution from min to max inclusive */
 int64
-getrand(int64 min, int64 max)
+getrand(pcg64f_random_t *rng, int64 min, int64 max)
 {
 	/*
 	 * Odd coding is so that min and max have approximately the same chance of
 	 * being selected as do numbers between them.
 	 */
-	return min + (int64) ((max - min + 1) * genrand64_real2());
+	return min + (int64) ((max - min + 1) * genrand64_real2(rng));
 }
 
 /*
@@ -27,7 +26,7 @@ getrand(int64 min, int64 max)
  * value is exp(-parameter).
  */
 int64
-getExponentialRand(int64 min, int64 max, double parameter)
+getExponentialRand(pcg64f_random_t *rng, int64 min, int64 max, double parameter)
 {
 	double		cut,
 				uniform,
@@ -35,7 +34,7 @@ getExponentialRand(int64 min, int64 max, double parameter)
 
 	cut = exp(-parameter);
 	/* erand in [0, 1), uniform in (0, 1] */
-	uniform = 1.0 - genrand64_real2();
+	uniform = 1.0 - genrand64_real2(rng);
 
 	/*
 	 * inner expression in (cut, 1] (if parameter > 0), rand in [0, 1)
@@ -47,7 +46,7 @@ getExponentialRand(int64 min, int64 max, double parameter)
 
 /* random number generator: gaussian distribution from min to max inclusive */
 int64
-getGaussianRand(int64 min, int64 max, double parameter)
+getGaussianRand(pcg64f_random_t *rng, int64 min, int64 max, double parameter)
 {
 	double		stdev;
 	double		rand;
@@ -72,8 +71,8 @@ getGaussianRand(int64 min, int64 max, double parameter)
 		 * are expected in (0, 1] (see
 		 * http://en.wikipedia.org/wiki/Box_muller)
 		 */
-		double		rand1 = 1.0 - genrand64_real2();
-		double		rand2 = 1.0 - genrand64_real2();
+		double		rand1 = 1.0 - genrand64_real2(rng);
+		double		rand2 = 1.0 - genrand64_real2(rng);
 
 		/* Box-Muller basic form transform */
 		double		var_sqrt = sqrt(-2.0 * log(rand1));
@@ -100,7 +99,7 @@ getGaussianRand(int64 min, int64 max, double parameter)
  * will approximate a Poisson distribution centered on the given value.
  */
 int64
-getPoissonRand(int64 center)
+getPoissonRand(pcg64f_random_t *rng, int64 center)
 {
 	/*
 	 * Use inverse transform sampling to generate a value > 0, such that the
@@ -109,7 +108,7 @@ getPoissonRand(int64 center)
 	double		uniform;
 
 	/* erand in [0, 1), uniform in (0, 1] */
-	uniform = 1.0 - genrand64_real2();
+	uniform = 1.0 - genrand64_real2(rng);
 
 	return (int64) (-log(uniform) * ((double) center) + 0.5);
 }
