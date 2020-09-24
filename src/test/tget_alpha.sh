@@ -6,6 +6,7 @@
 testAlpha1()
 {
 	export LD_LIBRARY_PATH=".."
+	./tget_alpha 
 	COUNT=`./tget_alpha | sort | uniq | wc -l`
 	assertEquals "52 letters" 52 $COUNT
 }

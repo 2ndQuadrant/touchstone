@@ -3,7 +3,8 @@ SET(BFILES tgenerate_analyze tgenerate_plan tgenerate_query tget_alpha
 SET(CFILES tgenerate_analyze.c tgenerate_plan.c tgenerate_query.c tget_alpha.c
 	tget_days.c)
 
-SET_SOURCE_FILES_PROPERTIES(${CFILES} COMPILE_FLAGS "-I${CMAKE_SOURCE_DIR}/src")
+SET_SOURCE_FILES_PROPERTIES(${CFILES}
+    COMPILE_FLAGS "-I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/pcg -I${CMAKE_SOURCE_DIR}/src/pcg/extras")
 
 ADD_EXECUTABLE(tgenerate_analyze tgenerate_analyze.c)
 ADD_EXECUTABLE(tgenerate_plan tgenerate_plan.c)
@@ -11,7 +12,8 @@ ADD_EXECUTABLE(tgenerate_query tgenerate_query.c)
 ADD_EXECUTABLE(tget_alpha tget_alpha.c)
 ADD_EXECUTABLE(tget_days tget_days.c)
 
-SET_TARGET_PROPERTIES(${BFILES} PROPERTIES LINK_FLAGS "-L.. -ltouchstone")
+SET_TARGET_PROPERTIES(${BFILES} PROPERTIES
+    LINK_FLAGS "-L${CMAKE_BINARY_DIR}/src -ltouchstone")
 
 ADD_TEST(alpha sh ${CMAKE_SOURCE_DIR}/src/test/tget_alpha.sh)
 ADD_TEST(data_generator sh ${CMAKE_SOURCE_DIR}/src/test/tdata_generator.sh)
