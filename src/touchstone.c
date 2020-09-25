@@ -101,6 +101,12 @@ int generate_query(char *in, char *out, struct query_t *q)
 	return 0;
 }
 
+/* generates a random number on [0,1]-real-interval */
+double genrand64_real1(pcg64f_random_t *rng)
+{
+	return (pcg64f_random_r(rng) >> 11) * (1.0/9007199254740991.0);
+}
+
 /* generates a random number on [0,1)-real-interval */
 double genrand64_real2(pcg64f_random_t *rng)
 {
@@ -112,10 +118,16 @@ void get_alpha(pcg64f_random_t *rng, char *str, int min, int max)
 	int length;
 	int i;
 
-	length = getrand(rng, min, max) + 1;
+	/* Keep the data reproduceable by using the main rng to seed a new prng. */
+	pcg64f_random_t arng;
+	unsigned long long seed = pcg64f_random_r(rng);
+
+	pcg64f_srandom_r(&arng, seed);
+
+	length = getrand(&arng, min, max) + 1;
 	str[length - 1] = '\0';
 	for (i = 0; i < length - 1; i++)
-		str[i] = alpha[(int) getrand(rng, 0, ALPHA_LEN - 1)];
+		str[i] = alpha[(int) getrand(&arng, 0, ALPHA_LEN - 1)];
 }
 
 void get_date(pcg64f_random_t *rng, struct tm *tm, time_t tloc1, time_t diff)
