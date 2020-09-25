@@ -52,6 +52,16 @@ getGaussianRand(pcg64f_random_t *rng, int64 min, int64 max, double parameter)
 	double		rand;
 
 	/*
+	 * Use the next random number to seed a new prng to keep the data
+	 * reproducible.
+	 */
+
+	pcg64f_random_t grng;
+	unsigned long long seed = pcg64f_random_r(rng);
+
+	pcg64f_srandom_r(&grng, seed);
+
+	/*
 	 * Get user specified random number from this loop, with -parameter <
 	 * stdev <= parameter
 	 *
@@ -66,13 +76,10 @@ getGaussianRand(pcg64f_random_t *rng, int64 min, int64 max, double parameter)
 	do
 	{
 		/*
-		 * genrand64_real2 generates [0,1), but for the basic version of the
-		 * Box-Muller transform the two uniformly distributed random numbers
-		 * are expected in (0, 1] (see
 		 * http://en.wikipedia.org/wiki/Box_muller)
 		 */
-		double		rand1 = 1.0 - genrand64_real2(rng);
-		double		rand2 = 1.0 - genrand64_real2(rng);
+		double		rand1 = 1.0 - genrand64_real1(&grng);
+		double		rand2 = 1.0 - genrand64_real1(&grng);
 
 		/* Box-Muller basic form transform */
 		double		var_sqrt = sqrt(-2.0 * log(rand1));

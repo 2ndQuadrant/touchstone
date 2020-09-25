@@ -33,6 +33,7 @@ struct query_t {
 };
 
 int generate_query(char *, char *, struct query_t *);
+double genrand64_real1(pcg64f_random_t *);
 double genrand64_real2(pcg64f_random_t *);
 void get_alpha(pcg64f_random_t *, char *, int, int);
 void get_date(pcg64f_random_t *, struct tm *, time_t, time_t);

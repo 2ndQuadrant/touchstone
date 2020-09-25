@@ -126,8 +126,6 @@ int generate_data(pcg64f_random_t *rng, FILE *stream,
 	char str[MAX_BUFFER_LEN];
 	int end = table->columns - 1;
 
-	FILE *which;
-	FILE *blackhole = NULL;
 	long long chunk_size;
 	long long chunk_start = 0;
 	long long last_row;
@@ -136,24 +134,40 @@ int generate_data(pcg64f_random_t *rng, FILE *stream,
 	long long row, col;
 
 	if (chunks > 1) {
+		int multiplier = 0;
+
 		chunk_size = table->rows / (long long) chunks;
 		chunk_start = (chunk - 1) * chunk_size;
 
-		blackhole = fopen("/dev/null", "w");
-		if (blackhole == NULL) {
-			fprintf(stderr, "ERROR: cannot open /dev/null [%d]\n", errno);
-			return 2;
+		/* Calculate how far to advanve the prng base on the column types. */
+		for (col = 0; col < table->columns; col++) {
+			switch (table->column[col].type) {
+			case TYPE_DATE:
+			case TYPE_EXPONENTIAL:
+			case TYPE_GAUSSIAN:
+			case TYPE_INTEGER:
+			case TYPE_LIST:
+			case TYPE_POISSON:
+			case TYPE_TEXT:
+				++multiplier;
+				break;
+			case TYPE_SEQUENCE:
+				break;
+			default:
+				fprintf(stderr,
+						"ERROR: unhandled column definition for prng advancing: %c\n",
+						table->column[col].type);
+				return 1;
+			}
 		}
+		pcg64f_advance_r(rng, chunk_start * multiplier);
+
 		last_row = chunk * chunk_size;
 	}
 	else
 		last_row = table->rows;
 
-	for (row = 0; row < last_row; row++) {
-		if (row < chunk_start)
-			which = blackhole;
-		else
-			which = stream;
+	for (row = chunk_start; row < last_row; row++) {
 		for (col = 0; col < table->columns; col++) {
 			switch (table->column[col].type) {
 			case TYPE_DATE:
@@ -162,7 +176,7 @@ int generate_data(pcg64f_random_t *rng, FILE *stream,
 								&table->column[col].arguments)->tloc1,
 						((struct date_t *)
 								&table->column[col].arguments)->diff);
-				fprintf(which, "%d-%d-%d", tm.tm_year, tm.tm_mon, tm.tm_mday);
+				fprintf(stream, "%d-%d-%d", tm.tm_year, tm.tm_mon, tm.tm_mday);
 				break;
 			case TYPE_EXPONENTIAL:
 				ll = getExponentialRand(rng, ((struct exponential_t *)
@@ -171,7 +185,7 @@ int generate_data(pcg64f_random_t *rng, FILE *stream,
 								&table->column[col].arguments)->arg2,
 						((struct exponential_t *)
 								&table->column[col].arguments)->arg3);
-				fprintf(which, "%lld", ll);
+				fprintf(stream, "%lld", ll);
 				break;
 			case TYPE_GAUSSIAN:
 				ll = getGaussianRand(rng, ((struct gaussian_t *)
@@ -180,17 +194,17 @@ int generate_data(pcg64f_random_t *rng, FILE *stream,
 								&table->column[col].arguments)->arg2,
 						((struct gaussian_t *)
 								&table->column[col].arguments)->arg3);
-				fprintf(which, "%lld", ll);
+				fprintf(stream, "%lld", ll);
 				break;
 			case TYPE_INTEGER:
 				ll = getrand(rng, ((struct integer_t *)
 								&table->column[col].arguments)->arg1,
 						((struct integer_t *)
 								&table->column[col].arguments)->arg2);
-				fprintf(which, "%lld", ll);
+				fprintf(stream, "%lld", ll);
 				break;
 			case TYPE_LIST:
-				fprintf(which, "%s", ((struct list_t *)
+				fprintf(stream, "%s", ((struct list_t *)
 						&table->column[col].arguments)->line[
 								getrand(rng, 0, ((struct list_t *)
 										&table->column[col].arguments)->size -
@@ -199,13 +213,13 @@ int generate_data(pcg64f_random_t *rng, FILE *stream,
 			case TYPE_POISSON:
 				ll = getPoissonRand(rng, ((struct poisson_t *)
 								&table->column[col].arguments)->arg1);
-				fprintf(which, "%lld", ll);
+				fprintf(stream, "%lld", ll);
 				break;
 			case TYPE_SEQUENCE:
 				sequence(str, row +
 						((struct sequence_t *)
 								&table->column[col].arguments)->arg1);
-				fprintf(which, "%s", str);
+				fprintf(stream, "%s", str);
 				break;
 			case TYPE_TEXT:
 				get_alpha(rng, str,
@@ -213,7 +227,7 @@ int generate_data(pcg64f_random_t *rng, FILE *stream,
 								&table->column[col].arguments)->arg1,
 						((struct text_t *)
 								&table->column[col].arguments)->arg2);
-				fprintf(which, "%s", str);
+				fprintf(stream, "%s", str);
 				break;
 			default:
 				fprintf(stderr, "ERROR: unhandled column definition: %c\n",
@@ -221,14 +235,11 @@ int generate_data(pcg64f_random_t *rng, FILE *stream,
 				return 1;
 			}
 			if (col < end)
-				fprintf(which, "%c", delimiter);
+				fprintf(stream, "%c", delimiter);
 		}
-		fprintf(which, "\n");
-		fflush(which);
+		fprintf(stream, "\n");
+		fflush(stream);
 	}
-
-	if (blackhole != NULL)
-		fclose(blackhole);
 
 	return 0;
 }
@@ -575,6 +586,7 @@ int main(int argc, char *argv[])
 	if (seed == -1) {
 		entropy_getbytes((void*) seed, sizeof(seed));
 	}
+	fprintf(stderr, "seed: %llu\n", seed);
 
 	if (outdir[0] != '\0') {
 		/* Naively remove any extension to the data definition file. */
