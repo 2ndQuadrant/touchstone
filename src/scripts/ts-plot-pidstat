@@ -15,10 +15,10 @@ usage() {
 }
 
 plot_cpu() {
-	local PID=$1
-	local DATAFILE=$2
+	PID=$1
+	DATAFILE=$2
 
-	local PIDDIR="pidstat-cpu"
+	PIDDIR="pidstat-cpu"
 	mkdir -p $PIDDIR
 
 	gnuplot <<- __EOF__
@@ -40,10 +40,10 @@ plot_cpu() {
 }
 
 plot_io() {
-	local PID=$1
-	local DATAFILE=$2
+	PID=$1
+	DATAFILE=$2
 
-	local PIDDIR="pidstat-io"
+	PIDDIR="pidstat-io"
 	mkdir -p $PIDDIR
 
 	gnuplot <<- __EOF__
@@ -66,10 +66,10 @@ plot_io() {
 }
 
 plot_mem() {
-	local PID=$1
-	local DATAFILE=$2
+	PID=$1
+	DATAFILE=$2
 
-	local PIDDIR="pidstat-mem"
+	PIDDIR="pidstat-mem"
 	mkdir -p $PIDDIR
 
 	gnuplot <<- __EOF__
@@ -95,9 +95,9 @@ plot() {
 	awk 'NR > 1 && NF > 1 && $1 != "#" {print $3, $25}' pidstat.txt | \
 			sort -n | uniq > pidstat-index.txt
 
-	local PIDS=`awk 'NR > 1 && NF > 1 && $1 != "#" {print $3}' $CSVFILE | sort -n | uniq`
+	PIDS=`awk 'NR > 1 && NF > 1 && $1 != "#" {print $3}' $CSVFILE | sort -n | uniq`
 	for PID in $PIDS; do
-		local DATAFILE=`tempfile`
+		DATAFILE=`tempfile`
 		DATAFILES="$DATAFILES $DATAFILE"
 
 		grep "^#" pidstat.txt | head -n 1 > $DATAFILE

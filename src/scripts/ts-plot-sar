@@ -14,9 +14,9 @@ usage() {
 }
 
 plot_blockdev_io() {
-	local FILE=$1
-	local PLOTLINES=$2
-	local DEV=$3
+	FILE=$1
+	PLOTLINES=$2
+	DEV=$3
 
 	gnuplot <<- __EOF__
 		set datafile separator ";"
@@ -40,8 +40,8 @@ plot_blockdev_io() {
 }
 
 plot_blockdev_rd() {
-	local FILE=$1
-	local PLOTLINES=$2
+	FILE=$1
+	PLOTLINES=$2
 
 	gnuplot <<- __EOF__
 		set datafile separator ";"
@@ -65,8 +65,8 @@ plot_blockdev_rd() {
 }
 
 plot_blockdev_tps() {
-	local FILE=$1
-	local PLOTLINES=$2
+	FILE=$1
+	PLOTLINES=$2
 
 	gnuplot <<- __EOF__
 		set datafile separator ";"
@@ -90,8 +90,8 @@ plot_blockdev_tps() {
 }
 
 plot_blockdev_util() {
-	local FILE=$1
-	local PLOTLINES=$2
+	FILE=$1
+	PLOTLINES=$2
 
 	gnuplot <<- __EOF__
 		set datafile separator ";"
@@ -115,8 +115,8 @@ plot_blockdev_util() {
 }
 
 plot_blockdev_wd() {
-	local FILE=$1
-	local PLOTLINES=$2
+	FILE=$1
+	PLOTLINES=$2
 
 	gnuplot <<- __EOF__
 		set datafile separator ";"
@@ -144,22 +144,22 @@ plot_blockdev() {
 
 	mkdir -p blockdev
 
-	local CSVFILE="sar-blockdev.csv"
-	local DATAFILES=""
-	local IOPLOTLINES=""
-	local RDPLOTLINES=""
-	local TPSPLOTLINES=""
-	local UTILPLOTLINES=""
-	local WDPLOTLINES=""
+	CSVFILE="sar-blockdev.csv"
+	DATAFILES=""
+	IOPLOTLINES=""
+	RDPLOTLINES=""
+	TPSPLOTLINES=""
+	UTILPLOTLINES=""
+	WDPLOTLINES=""
 
-	local DEVICES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort | uniq`
+	DEVICES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort | uniq`
 	for DEV in $DEVICES; do
-		local DATAFILE=`tempfile`
+		DATAFILE=`tempfile`
 
 		DATAFILES="$DATAFILES $DATAFILE"
 		awk -F ";" "NR == 1 || \$4 == \"$DEV\"" $CSVFILE > $DATAFILE
 
-		local PLOTFILE="blockdev/sar-per-blockdev-io-${DEV}.png"
+		PLOTFILE="blockdev/sar-per-blockdev-io-${DEV}.png"
 		if [ ! "x$IOPLOTLINES" = "x" ]; then
 			IOPLOTLINES="$IOPLOTLINES,"
 		fi
@@ -170,7 +170,7 @@ plot_blockdev() {
 		IOPLOTLINES="$IOPLOTLINES $THISPLOTLINE"
 		plot_blockdev_io $PLOTFILE "$THISPLOTLINE" $DEV
 
-		local PLOTFILE="blockdev/sar-per-blockdev-rd-${DEV}.png"
+		PLOTFILE="blockdev/sar-per-blockdev-rd-${DEV}.png"
 		if [ ! "x$RDPLOTLINES" = "x" ]; then
 			RDPLOTLINES="$RDPLOTLINES,"
 		fi
@@ -179,7 +179,7 @@ plot_blockdev() {
 		RDPLOTLINES="$RDPLOTLINES $THISPLOTLINE"
 		plot_blockdev_rd $PLOTFILE "$THISPLOTLINE"
 
-		local PLOTFILE="blockdev/sar-per-blockdev-tps-${DEV}.png"
+		PLOTFILE="blockdev/sar-per-blockdev-tps-${DEV}.png"
 		if [ ! "x$TPSPLOTLINES" = "x" ]; then
 			TPSPLOTLINES="$TPSPLOTLINES,"
 		fi
@@ -188,7 +188,7 @@ plot_blockdev() {
 		TPSPLOTLINES="$TPSPLOTLINES $THISPLOTLINE"
 		plot_blockdev_tps $PLOTFILE "$THISPLOTLINE"
 
-		local PLOTFILE="blockdev/sar-per-blockdev-util-${DEV}.png"
+		PLOTFILE="blockdev/sar-per-blockdev-util-${DEV}.png"
 		if [ ! "x$UTILPLOTLINES" = "x" ]; then
 			UTILPLOTLINES="$UTILPLOTLINES,"
 		fi
@@ -197,7 +197,7 @@ plot_blockdev() {
 		UTILPLOTLINES="$UTILPLOTLINES $THISPLOTLINE"
 		plot_blockdev_util $PLOTFILE "$THISPLOTLINE"
 
-		local PLOTFILE="blockdev/sar-per-blockdev-wd-${DEV}.png"
+		PLOTFILE="blockdev/sar-per-blockdev-wd-${DEV}.png"
 		if [ ! "x$WDPLOTLINES" = "x" ]; then
 			WDPLOTLINES="$WDPLOTLINES,"
 		fi
@@ -215,11 +215,11 @@ plot_blockdev() {
 }
 
 plot_cpu() {
-	local CSVFILE="sar-cpu.csv"
+	CSVFILE="sar-cpu.csv"
 
 	# Create aggregated chart for all processors
 
-	local DATAFILE=`tempfile`
+	DATAFILE=`tempfile`
 	awk -F ";" 'NR == 1 || $4 == -1' $CSVFILE > $DATAFILE
 	gnuplot <<- __EOF__
 		datafile = "$DATAFILE"
@@ -249,11 +249,11 @@ plot_cpu() {
 
 	# Create % busy time per processor on a single chart.
 
-	local DATAFILES=""
-	local GNUPLOTLINE=""
-	local CPUS=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort -nr | head -1`
+	DATAFILES=""
+	GNUPLOTLINE=""
+	CPUS=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort -nr | head -1`
 	for CPU in `seq 0 $CPUS`; do
-		local DATAFILE=`tempfile`
+		DATAFILE=`tempfile`
 		DATAFILES="$DATAFILES $DATAFILE"
 		awk -F ";" "NR == 1 || \$4 == $CPU" $CSVFILE > $DATAFILE
 
@@ -286,8 +286,8 @@ plot_cpu() {
 }
 
 plot_net_kb() {
-	local FILE=$1
-	local IFACE=$2
+	FILE=$1
+	IFACE=$2
 
 	gnuplot <<- __EOF__
 		datafile = "$DATAFILE"
@@ -313,13 +313,13 @@ plot_net_kb() {
 }
 
 plot_net() {
-	local CSVFILE="sar-net.csv"
+	CSVFILE="sar-net.csv"
 
 	mkdir -p iface
 
-	local IFACES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort -n | uniq`
+	IFACES=`awk -F ";" 'NR > 1 {print $4}' $CSVFILE | sort -n | uniq`
 	for IFACE in $IFACES; do
-		local DATAFILE=`tempfile`
+		DATAFILE=`tempfile`
 
 		DATAFILES="$DATAFILES $DATAFILE"
 		awk -F ";" "NR == 1 || \$4 == \"$IFACE\"" $CSVFILE > $DATAFILE
