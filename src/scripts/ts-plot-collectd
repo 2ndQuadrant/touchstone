@@ -37,11 +37,11 @@ plot_cpu() {
 
 	cd aggregation-cpu-average
 
-	local DATAIDLE=`tempfile`
-	local DATAINTERRUPT=`tempfile`
-	local DATANICE=`tempfile`
-	local DATASYSTEM=`tempfile`
-	local DATAUSER=`tempfile`
+	DATAIDLE=`tempfile`
+	DATAINTERRUPT=`tempfile`
+	DATANICE=`tempfile`
+	DATASYSTEM=`tempfile`
+	DATAUSER=`tempfile`
 
 	merge_collectd_data "percent-idle-" $DATAIDLE
 	merge_collectd_data "percent-interrupt-" $DATAINTERRUPT
@@ -84,11 +84,11 @@ plot_memory() {
 
 	cd memory
 
-	local DATAACTIVE=`tempfile`
-	local DATACACHE=`tempfile`
-	local DATAFREE=`tempfile`
-	local DATAINACTIVE=`tempfile`
-	local DATAWIRED=`tempfile`
+	DATAACTIVE=`tempfile`
+	DATACACHE=`tempfile`
+	DATAFREE=`tempfile`
+	DATAINACTIVE=`tempfile`
+	DATAWIRED=`tempfile`
 
 	merge_collectd_data "memory-active-" $DATAACTIVE
 	merge_collectd_data "memory-cache-" $DATACACHE
@@ -131,13 +131,13 @@ plot_processes() {
 
 	cd processes
 
-	local DATABLOCKED=`tempfile`
-	local DATAIDLE=`tempfile`
-	local DATARUNNING=`tempfile`
-	local DATASLEEPING=`tempfile`
-	local DATASTOPPED=`tempfile`
-	local DATAWAIT=`tempfile`
-	local DATAZOMBIES=`tempfile`
+	DATABLOCKED=`tempfile`
+	DATAIDLE=`tempfile`
+	DATARUNNING=`tempfile`
+	DATASLEEPING=`tempfile`
+	DATASTOPPED=`tempfile`
+	DATAWAIT=`tempfile`
+	DATAZOMBIES=`tempfile`
 
 	merge_collectd_data "ps_state-blocked-" $DATABLOCKED
 	merge_collectd_data "ps_state-idle-" $DATAIDLE
