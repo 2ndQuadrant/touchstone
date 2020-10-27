@@ -11,7 +11,7 @@ usage() {
 }
 
 plot_q() {
-	local DATAFILE=`tempfile`
+	DATAFILE=`tempfile`
 	awk -F , 'NR > 1 {print $1, $2}' `basename $QTIME` | sort -nk 1 > $DATAFILE
 	gnuplot <<- __EOF__
 			datafile = "$DATAFILE"

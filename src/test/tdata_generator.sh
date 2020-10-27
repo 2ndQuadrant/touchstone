@@ -10,7 +10,7 @@ oneTimeSetUp() {
 }
 
 testCheckRowCount() {
-	local TABLE="two-rows"
+	TABLE="two-rows"
 	touchstone-generate-table-data -f ${HOMEDIR}/${TABLE}.ddf -o $SHUNIT_TMPDIR
 	ROWS=`wc -l $SHUNIT_TMPDIR/${TABLE}.data | cut -d " " -f 1`
 	assertEquals "rows" 2 $ROWS
@@ -22,14 +22,14 @@ testCheckRowFormat() {
 }
 
 testChunk1() {
-	local TABLE="two-rows"
+	TABLE="two-rows"
 	touchstone-generate-table-data -f ${HOMEDIR}/${TABLE}.ddf -c 2 -C 1 -o $SHUNIT_TMPDIR
 	ROWS=`wc -l $SHUNIT_TMPDIR/${TABLE}.1.data | cut -d " " -f 1`
 	assertEquals "rows" 1 $ROWS
 }
 
 testChunk1() {
-	local TABLE="two-rows"
+	TABLE="two-rows"
 	touchstone-generate-table-data -f ${HOMEDIR}/${TABLE}.ddf -c 2 -C 2 -o $SHUNIT_TMPDIR
 	ROWS=`wc -l $SHUNIT_TMPDIR/${TABLE}.2.data | cut -d " " -f 1`
 	assertEquals "rows" 1 $ROWS
@@ -41,7 +41,7 @@ testChunkNotSpecified() {
 }
 
 testDataFileCreated() {
-	local TABLE="two-rows"
+	TABLE="two-rows"
 	touchstone-generate-table-data -f ${HOMEDIR}/${TABLE}.ddf -o $SHUNIT_TMPDIR
 	assertTrue 'data file exists' "[ -f $SHUNIT_TMPDIR/${TABLE}.data ]"
 }
