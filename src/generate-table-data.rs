@@ -8,6 +8,7 @@ extern crate rand_pcg;
 extern crate regex;
 
 use std::boxed::Box;
+use std::path::{Path, PathBuf};
 use std::fs;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process;
@@ -359,32 +360,35 @@ fn generate_data(
 }
 
 fn main() -> Result<()> {
-    let matches = clap_app!(touchstone =>
-        (@arg CHUNKS: -c +takes_value default_value("1") "number of data file chunks to generate")
-        (@arg CHUNK: -C +required +takes_value "specify which chunk to generate")
-        (@arg DELIMITER: -d +takes_value default_value("	") "column delimiter")
-        (@arg FILENAME: -f +required +takes_value "data definition file")
-        (@arg SEED: -s +takes_value "set seed [default: random]")
-    )
-    .get_matches();
+    let matches = command!()
+        .arg(arg!(-c [CHUNKS] "number of data file chunks to generate")
+            .value_parser(value_parser!(u8))
+            .default_value("1"))
+        .arg(arg!(-C [CHUNK] "specify which chunk to generate")
+            .value_parser(value_parser!(u8))
+            .required(true))
+        .arg(arg!(-d [DELIMITER] "column delimiter")
+            .default_value("\t"))
+        .arg(arg!(-f [FILENAME] "data definition file")
+            .value_parser(value_parser!(PathBuf)))
+        .arg(arg!(-s [SEED] "set seed [default: random]")
+            .value_parser(value_parser!(u64)))
+        .get_matches();
 
-    let seed: u64 = if matches.value_of("SEED").is_none() {
-        rand::random()
-    } else {
-        matches.value_of("SEED").unwrap().parse::<u64>().unwrap()
-    };
+    let seed = matches.get_one::<u64>("SEED").copied()
+        .unwrap_or_else(rand::random::<u64>);
+    let filename = matches.get_one::<PathBuf>("FILENAME").unwrap();
+    let table = read_data_definition_file(filename)
+        .with_context(|| format!("failed reading input file {}", filename.display()))?;
 
-    let filename = matches.value_of("FILENAME").unwrap().to_string();
-    let table = read_data_definition_file(filename)?;
-
-    let delimiter = matches.value_of("DELIMITER").unwrap().to_string();
-    let chunks = matches.value_of("CHUNKS").unwrap().parse::<u8>().unwrap();
-    let chunk = matches.value_of("CHUNK").unwrap().parse::<u8>().unwrap();
+    let delimiter = matches.get_one::<String>("DELIMITER").unwrap().to_owned();
+    let chunks = *matches.get_one::<u8>("CHUNKS").unwrap();
+    let chunk = *matches.get_one::<u8>("CHUNK").unwrap();
     generate_data(table, delimiter, chunks as u64, chunk as u64, seed)?;
     Ok(())
 }
 
-fn read_data_definition_file(filename: String) -> Result<TableDefinition> {
+fn read_data_definition_file(filename: &Path) -> Result<TableDefinition> {
     let file = fs::File::open(filename)?;
     let mut reader = BufReader::new(file);
     let mut buf = String::new();
