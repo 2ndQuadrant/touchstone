@@ -13,6 +13,8 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::process;
 use std::vec::Vec;
 
+use anyhow::{anyhow, Context, Result};
+
 use chrono::{NaiveDate, NaiveDateTime};
 
 use rand::{Rng, SeedableRng};
@@ -71,8 +73,8 @@ impl Column for Date {
         let sometime: i64 = self.start.timestamp()
             + ((self.end.timestamp() - self.start.timestamp() + 1) as f64 * rng.gen::<f64>())
                 as i64;
-        let ndt: NaiveDateTime = NaiveDateTime::from_timestamp(sometime, 0);
-        return Some(ndt.format("%Y-%m-%d").to_string());
+        NaiveDateTime::from_timestamp_opt(sometime, 0)
+            .map(|ndt: NaiveDateTime| ndt.format("%Y-%m-%d").to_string())
     }
 }
 
@@ -253,7 +255,7 @@ impl Column for Text {
             self.min + ((self.max - self.min + 1) as f64 * rng2.gen::<f64>()) as i128;
         let alpha: String = (0..length)
             .map(|_| {
-                let idx = rng2.gen_range(0, ALPHA.len());
+                let idx = rng2.gen_range(0..ALPHA.len());
                 ALPHA[idx] as char
             })
             .collect();
@@ -356,7 +358,7 @@ fn generate_data(
     Ok(())
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<()> {
     let matches = clap_app!(touchstone =>
         (@arg CHUNKS: -c +takes_value default_value("1") "number of data file chunks to generate")
         (@arg CHUNK: -C +required +takes_value "specify which chunk to generate")
@@ -373,7 +375,7 @@ fn main() -> std::io::Result<()> {
     };
 
     let filename = matches.value_of("FILENAME").unwrap().to_string();
-    let table = read_data_definition_file(filename);
+    let table = read_data_definition_file(filename)?;
 
     let delimiter = matches.value_of("DELIMITER").unwrap().to_string();
     let chunks = matches.value_of("CHUNKS").unwrap().parse::<u8>().unwrap();
@@ -382,8 +384,8 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn read_data_definition_file(filename: String) -> TableDefinition {
-    let file = fs::File::open(filename).unwrap();
+fn read_data_definition_file(filename: String) -> Result<TableDefinition> {
+    let file = fs::File::open(filename)?;
     let mut reader = BufReader::new(file);
     let mut buf = String::new();
 
@@ -392,9 +394,8 @@ fn read_data_definition_file(filename: String) -> TableDefinition {
     // The first line of the data definition file is the number of rows to
     // generate.
     reader
-        .read_line(&mut buf)
-        .expect("error reading from table definition file");
-    let rows: u64 = buf.trim().parse::<u64>().unwrap();
+        .read_line(&mut buf).context("reading from table definition file")?;
+    let rows: u64 = buf.trim().parse::<u64>().context("expected an integer value on the first line")?;
     buf.clear();
 
     // The remaining rows in the data definition file correspond to each column
@@ -402,7 +403,7 @@ fn read_data_definition_file(filename: String) -> TableDefinition {
     loop {
         let length = reader
             .read_line(&mut buf)
-            .expect("error reading from table definition file");
+            .context("reading from table definition file")?;
         if length == 0 {
             break;
         }
@@ -410,20 +411,20 @@ fn read_data_definition_file(filename: String) -> TableDefinition {
         let definition: Vec<char> = buf.trim().chars().collect();
         if definition[0] == TYPE_DATE {
             let re = Regex::new(r"d(\d+)-(\d+)-(\d+),(\d+)-(\d+)-(\d+)").unwrap();
-            let cap = re.captures(&buf).unwrap();
+            let cap = re.captures(&buf).context("parsing date")?;
             let c = Date {
-                start: NaiveDate::from_ymd(
+                start: NaiveDate::from_ymd_opt(
                     cap[1].parse::<i32>().unwrap(),
                     cap[2].parse::<u32>().unwrap(),
                     cap[3].parse::<u32>().unwrap(),
-                )
-                .and_hms(0, 0, 0),
-                end: NaiveDate::from_ymd(
+                ).ok_or(anyhow!("failed parsing start date"))?
+                .and_hms_opt(0, 0, 0).unwrap(),
+                end: NaiveDate::from_ymd_opt(
                     cap[4].parse::<i32>().unwrap(),
                     cap[5].parse::<u32>().unwrap(),
                     cap[6].parse::<u32>().unwrap(),
-                )
-                .and_hms(0, 0, 0),
+                ).ok_or(anyhow!("failed parsing end date"))?
+                .and_hms_opt(0, 0, 0).unwrap(),
             };
             columns.push(Box::new(c));
         } else if definition[0] == TYPE_EXPONENTIAL {
@@ -493,10 +494,8 @@ fn read_data_definition_file(filename: String) -> TableDefinition {
         buf.clear();
     }
 
-    let table = TableDefinition {
+    Ok(TableDefinition {
         rows: rows,
         columns: columns,
-    };
-
-    return table;
+    })
 }
